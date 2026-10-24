@@ -196,10 +196,12 @@ async function endpoint(request,env,url) {
       env.DB.prepare("SELECT COUNT(*) n FROM podcasts WHERE date IS NOT NULL"),
       env.DB.prepare("SELECT id,title,date,source_url,speech_count FROM meetings WHERE status='ready' ORDER BY imported_at DESC LIMIT 15")
     ]);
+    const archive=await archiveStatus(env).catch(err=>({archive_error:String(err)}));
     return json({meetings:meetings.results[0].n,speeches:speeches.results[0].n,
       podcasts:podcasts.results[0].n,dated_podcasts:dated.results[0].n,recent_meetings:items.results,
       audio_archive_links:offlinePodcastIndex.length,
       audio_archive_meetings:new Set(offlinePodcastIndex.map(x=>x.date+":"+x.meeting_no)).size,
+      ...archive,
       protected:!!env.APP_PASSWORD});
   }
   if(method==="GET" && path==="/api/archive/status")return json(await archiveStatus(env));
