@@ -65,12 +65,12 @@ def parse_pdf(raw, expected_date=None, expected_meeting_no=None):
     if expected_date:
         d=dt.date.fromisoformat(expected_date)
         day=str(d.day)
-        expected=re.compile(r"\\b0?"+re.escape(day)+r"\\.\\s*"+MONTHS[d.month-1]+r"\\s+"+str(d.year)+r"\\b",re.I)
+        expected=re.compile(r"\b0?"+re.escape(day)+r"\.\s*"+MONTHS[d.month-1]+r"\s+"+str(d.year)+r"\b",re.I)
         if not expected.search(first):
             pdf.close()
             raise ValueError("PDF date does not match podcast date")
     if expected_meeting_no:
-        expected=re.compile(r"\\b"+str(expected_meeting_no)+r"\\.\\s*møde\\b",re.I)
+        expected=re.compile(r"\b"+str(expected_meeting_no)+r"\.\s*møde\\b",re.I)
         if not expected.search(first):
             pdf.close()
             raise ValueError("PDF meeting number does not match podcast")
