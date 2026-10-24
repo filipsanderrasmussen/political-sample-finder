@@ -131,27 +131,50 @@ async function liveSalenPodcasts() {
   liveFeedExpiry=Date.now()+10*60*1000;
   return entries;
 }
+// Match Danish/Unicode words, not substrings ("ulv" != "pulver").
+// SQLite LIKE is a coarse candidate filter; exact token matching happens here.
+function searchTokens(text){
+  return String(text||"").toLocaleLowerCase("da-DK").match(/[\p{L}\p{M}\p{N}_]+/gu)||[];
+}
+function matchesSearchTerms(content,terms){
+  if(!terms.length)return true;
+  const found=new Set(searchTokens(content));
+  return terms.every(t=>found.has(t.toLocaleLowerCase("da-DK")));
+}
 async function findSpeeches(env,params) {
   const q=(params.get("q")||"").trim().slice(0,160);
   const speaker=(params.get("speaker")||"").trim().slice(0,120);
   const fav=params.get("favorites")==="1";
   if(!q && !speaker && !fav)return [];
+  const terms=searchTokens(q).slice(0,10);
   const clauses=["m.status='ready'"], binds=[];
   const escapeLike=s=>s.replace(/!/g,"!!").replace(/%/g,"!%").replace(/_/g,"!_");
-  for(const token of q.split(/\s+/).filter(Boolean).slice(0,10)){
+  for(const term of terms) {
     clauses.push("lower(s.content) LIKE ? ESCAPE '!'");
-    binds.push("%"+escapeLike(token.toLowerCase())+"%");
+    binds.push("%"+escapeLike(term.toLowerCase())+"%");
   }
-  if(speaker){clauses.push("lower(s.speaker) LIKE ? ESCAPE '!'");
-    binds.push("%"+escapeLike(speaker.toLowerCase())+"%");}
+  if(speaker){
+    clauses.push("lower(s.speaker) LIKE ? ESCAPE '!'");
+    binds.push("%"+escapeLike(speaker.toLowerCase())+"%");
+  }
   if(fav) clauses.push("f.speech_id IS NOT NULL");
   const sql="SELECT s.id,s.idx,s.meeting_id,s.speaker,s.clock,s.content,s.page,m.date,m.title,m.meeting_no,m.samling,m.source_url,"+
     "CASE WHEN f.speech_id IS NULL THEN 0 ELSE 1 END favorite,"+
     "(SELECT MIN(clock) FROM speeches x WHERE x.meeting_id=s.meeting_id) first_clock "+
     "FROM speeches s JOIN meetings m ON m.id=s.meeting_id LEFT JOIN favorites f ON f.speech_id=s.id "+
-    "WHERE "+clauses.join(" AND ")+" ORDER BY m.date DESC,s.clock ASC LIMIT 120";
-  const result=await env.DB.prepare(sql).bind(...binds).all();
-  const rows=result.results||[];
+    "WHERE "+clauses.join(" AND ")+" ORDER BY m.date DESC,s.clock ASC,s.idx ASC LIMIT ? OFFSET ?";
+  // Apply the exact-word filter BEFORE the 120-result limit. Otherwise many
+  // early false-positive substrings can hide real matches further down.
+  const rows=[],pageSize=200,maxCandidates=12000;
+  for(let off=0;off<maxCandidates && rows.length<120;off+=pageSize){
+    const data=await env.DB.prepare(sql).bind(...binds,pageSize,off).all();
+    const batch=data.results||[];
+    for(const row of batch){
+      if(matchesSearchTerms(row.content,terms))rows.push(row);
+      if(rows.length>=120)break;
+    }
+    if(batch.length<pageSize)break;
+  }
   const dbByDate=new Map(),missing=[];
   for(const row of rows) {
     if(!dbByDate.has(row.date)){
@@ -169,16 +192,14 @@ async function findSpeeches(env,params) {
       else missing.push(row);
     }
   }
-  // Self-healing: matches appear even if the user has never clicked "Update audio index".
-  // The feed is fetched only when some result is missing a matching podcast.
   if(missing.length) {
-    try{
+    try {
       const fromFeed=await liveSalenPodcasts();
       for(const row of missing){
         row.podcasts=findMeetingAudio(fromFeed,row);
         row.audio_source=row.podcasts.length?"live":"not_in_feed";
       }
-    }catch(e){
+    }catch(e) {
       console.warn("RSS live lookup unavailable:",String(e));
       for(const row of missing)row.audio_source="feed_unavailable";
     }
@@ -326,4 +347,4 @@ export default {
     })().catch(err=>console.error("Scheduled transcript import:",err)));
   }
 };
-export { isoDate, rssEntries, safeMeeting, findMeetingAudio, contextParams };
+export { isoDate, rssEntries, safeMeeting, findMeetingAudio, contextParams, searchTokens, matchesSearchTerms };
