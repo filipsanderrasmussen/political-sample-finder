@@ -8,7 +8,7 @@
 <body>
 <header class="topbar">
   <div class="brand"><span class="brand-icon">◉</span><span>POLITICAL<br><b>SAMPLE FINDER</b></span></div>
-  <div class="top-right"><span id="stats">Henter statistik…</span><button id="openImport" class="button outline">+ Indlæs data</button></div>
+  <div class="top-right"><span id="stats">Henter statistik…</span><button id="openImport" class="button outline">Arkivstatus</button></div>
 </header>
 <main class="shell">
   <section class="hero">
@@ -34,27 +34,34 @@
   <footer>Referatklokkeslæt angiver starten af et talerindlæg, ikke sekundet for søgeordet. Podcastlinks er foreløbige datomatch, ikke verificeret synkronisering.</footer>
 </main>
 <dialog id="importDialog" class="dialog"><div class="dialog-content">
- <div class="dialog-head"><div><div class="eyebrow">DATAKILDER</div><h2>Indlæs Folketinget</h2></div><button class="close" id="closeImport" aria-label="Luk">×</button></div>
- <p class="intro">PDF'en analyseres i din browser; kun udtrukne referattekster gemmes i Cloudflare D1.</p>
- <div class="field"><label for="adminPassword">ADGANGSKODE TIL IMPORT OG FAVORITTER</label><input type="password" id="adminPassword" placeholder="APP_PASSWORD fra Cloudflare" autocomplete="off"><small>Opbevares kun i denne browserfane. Sættes som Worker-secret i Cloudflare.</small></div>
- <hr>
- <div class="eyebrow">01 / REFERAT</div>
- <div class="twofields"><div class="field"><label for="samling">SAMLING</label><input id="samling" value="20251" inputmode="numeric"></div><div class="field"><label for="meeting">MØDENUMMER</label><input id="meeting" value="41" type="number" min="1" max="200"></div></div>
- <button id="importBtn" class="button primary full">Hent og indeksér referat →</button>
- <p class="field-help">Kan Folketingstidende ikke nås? Download referatet og indlæs PDF-filen her.</p>
- <div class="uploadrow"><input type="file" id="pdfFile" accept="application/pdf,.pdf"><button id="uploadBtn" class="button outline">Indlæs valgt PDF</button></div>
- <p id="importState" class="feedback" aria-live="polite"></p>
- <hr>
- <div class="eyebrow">02 / LYDARKIV</div>
- <p class="field-help">Hent podcastlinks fra Folketingets officielle RSS-feed. Vi lagrer kun links, ikke MP3-filer.</p>
- <div class="uploadrow"><select id="feed"><option value="Salen">Folketingssalen</option><option value="Alle">Alle møder</option></select><button id="rssBtn" class="button outline">Opdatér lydindeks</button></div>
- <p id="rssState" class="feedback" aria-live="polite"></p>
- <hr>
- <div class="eyebrow">03 / HISTORISK SØGEARKIV</div>
- <p class="field-help">De cirka to års referater med MP3 klargøres automatisk og indlæses i Cloudflare. Du kan også fremskynde indekseringen her.</p>
- <button id="syncArchiveBtn" class="button outline full">Indeksér arkivet nu</button>
- <p id="archiveState" class="feedback" aria-live="polite"></p>
- <hr><p class="legal">Folketingets lyd og tv er beskyttet af brugsbetingelser. Læs betingelserne før bearbejdning eller offentliggørelse af samples.</p>
+ <div class="dialog-head"><div><div class="eyebrow">POLITICAL SAMPLE FINDER</div><h2>Arkivstatus</h2></div><button class="close" id="closeImport" aria-label="Luk">×</button></div>
+ <p class="intro">Lydlinks og søgbare referater bliver automatisk opdateret. Du behøver normalt ikke gøre noget.</p>
+ <div class="archive-overview" id="archiveState" role="status" aria-live="polite">Henter status for søgearkivet…</div>
+ <div class="field" id="adminLoginArea">
+  <label for="adminPassword">ADGANG TIL FAVORITTER OG MANUEL IMPORT</label>
+  <input type="password" id="adminPassword" placeholder="Din valgte adgangskode" autocomplete="current-password">
+  <button id="adminLoginBtn" class="button outline full" type="button">Log ind</button>
+  <small>Du forbliver logget ind i 30 dage på denne browser. Adgangskoden gemmes ikke i browseren.</small>
+ </div>
+ <div id="adminLoggedIn" class="auth-signed-in hidden"><span>✓ Du er logget ind</span><button type="button" id="adminLogoutBtn" class="link-btn muted-link">Log ud</button></div>
+ <p id="adminLoginStatus" class="feedback" role="status"></p>
+ <details class="advanced-import" id="advancedImport">
+  <summary>Avanceret: Manuel import og fejlfinding</summary>
+  <p class="field-help">Kun nødvendigt, hvis en konkret optagelse eller et referat mangler.</p>
+  <hr><div class="eyebrow">01 / IMPORTÉR ET REFERAT</div>
+  <div class="twofields"><div class="field"><label for="samling">SAMLING</label><input id="samling" value="20251" inputmode="numeric"></div><div class="field"><label for="meeting">MØDENUMMER</label><input id="meeting" value="41" type="number" min="1" max="200"></div></div>
+  <button id="importBtn" class="button primary full" type="button">Hent referat</button>
+  <p class="field-help">Kan dokumentet ikke hentes? Upload det originale PDF-referat manuelt.</p>
+  <div class="uploadrow"><input type="file" id="pdfFile" accept="application/pdf,.pdf"><button id="uploadBtn" class="button outline" type="button">Indlæs PDF</button></div>
+  <p id="importState" class="feedback" aria-live="polite"></p>
+  <hr><div class="eyebrow">02 / LYDINDEKS</div>
+  <div class="uploadrow"><select id="feed"><option value="Salen">Folketingssalen</option><option value="Alle">Alle møder</option></select><button id="rssBtn" class="button outline" type="button">Hent lydlinks</button></div>
+  <p id="rssState" class="feedback" aria-live="polite"></p>
+  <hr><div class="eyebrow">03 / GENINDEKSERING</div>
+  <p class="field-help">Indekseringen kører normalt af sig selv. Denne knap kan bruges til at fremskynde den.</p>
+  <button id="syncArchiveBtn" class="button outline full" type="button">Indeksér nu</button>
+ </details>
+ <hr><p class="legal">Folketingets lyd er omfattet af brugsbetingelser. Klipning og offentliggørelse skal vurderes særskilt.</p>
 </div></dialog>
 <dialog id="playerDialog" class="dialog player-dialog" aria-labelledby="playerTitle"><div class="dialog-content">
  <div class="player-topline">
