@@ -84,3 +84,9 @@
  .transcript-explanation{margin-bottom:9px}
  .player-primary{padding:12px}
 }
+
+.archive-overview{border:1px solid var(--border);background:var(--panel);border-radius:10px;padding:16px;margin:14px 0;font-size:13px;color:var(--text)}
+.auth-signed-in{display:flex;justify-content:space-between;align-items:center;gap:12px;color:var(--accent);font-size:13px}
+.advanced-import{margin-top:20px;border-top:1px solid var(--border);padding-top:14px}
+.advanced-import summary{cursor:pointer;font-size:13px;color:var(--accent)}
+.advanced-import[open] summary{margin-bottom:16px}
