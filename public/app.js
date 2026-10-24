@@ -62,10 +62,10 @@ function render(){
  $("stats").textContent=meet+" søgbare møder, "+speech.toLocaleString("da-DK")+" taleafsnit, "+audio+" møder med lyd";
  document.querySelectorAll(".quick-pads button[data-query]").forEach(btn=>
    btn.classList.toggle("is-active",btn.dataset.query.toLowerCase()===state.q.trim().toLowerCase()));
- $("count").textContent=state.loading?"SØGER_":((state.q.trim()||state.speaker.trim()||state.favorites)?String(state.rows.length).padStart(2,"0")+" FUNDET"+(state.rows.length===120?" / MAKS.":""):"KLAR TIL SØGNING");
+ $("count").textContent=state.loading?"SØGER":((state.q.trim()||state.speaker.trim()||state.favorites)?String(state.rows.length).padStart(2,"0")+" FUNDET"+(state.rows.length===120?" / MAKS.":""):"KLAR TIL SØGNING");
  const empty=$("empty");empty.classList.toggle("hidden",state.loading||state.rows.length>0);
  const searching=!!(state.q.trim()||state.speaker.trim()||state.favorites);
- empty.querySelector("h2").textContent=searching?"INGEN FUND_":"AFVENTER SØGNING_";
+ empty.querySelector("h2").textContent=searching?"INGEN FUND":"AFVENTER SØGNING";
  empty.querySelector("p").textContent=searching?"Ingen fund. Prøv et andet ord eller navn.":"Indtast et søgeord, eller vælg en hurtigsøgning.";
  $("emptyImport").classList.toggle("hidden",!!state.stats?.speeches);
  $("results").innerHTML=state.rows.map((r,i)=>{
@@ -416,4 +416,8 @@ function bind(){
  }).catch(()=>{$("archiveState").textContent="Arkivstatus er midlertidigt utilgængelig.";});
 
 }
-bind();stats().catch(e=>notice("API er ikke klar: "+e.message,true));
+bind();
+// Show the browser's real blinking text caret only on desktop, without popping
+// up a software keyboard when the page opens on mobile devices.
+if(window.matchMedia("(pointer:fine)").matches) $("query").focus({preventScroll:true});
+stats().catch(e=>notice("API er ikke klar: "+e.message,true));
