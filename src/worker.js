@@ -191,7 +191,9 @@ async function findSpeeches(env,params) {
   const fav=params.get("favorites")==="1";
   if(!q && !speaker && !fav)return [];
   const terms=searchTokens(q).slice(0,10);
-  const clauses=["m.status='ready'"], binds=[];
+  const clauses=["m.status='ready'",
+    // Quarantine stale first-sitting records erroneously dated in the second.
+    "NOT (m.samling='20251' AND m.date >= '2026-04-10' AND m.date < '2026-10-06')"], binds=[];
   const escapeLike=s=>s.replace(/!/g,"!!").replace(/%/g,"!%").replace(/_/g,"!_");
   for(const term of terms) {
     clauses.push("lower(s.content) LIKE ? ESCAPE '!'");
@@ -274,8 +276,8 @@ async function endpoint(request,env,url) {
   const path=url.pathname,method=request.method;
   if(method==="GET" && path==="/api/stats"){
     const [meetings,speeches,podcasts,dated,items]=await env.DB.batch([
-      env.DB.prepare("SELECT COUNT(*) n FROM meetings WHERE status='ready'"),
-      env.DB.prepare("SELECT COUNT(*) n FROM speeches s JOIN meetings m ON m.id=s.meeting_id WHERE m.status='ready'"),
+      env.DB.prepare("SELECT COUNT(*) n FROM meetings WHERE status='ready' AND NOT (samling='20251' AND date>='2026-04-10' AND date<'2026-10-06')"),
+      env.DB.prepare("SELECT COUNT(*) n FROM speeches s JOIN meetings m ON m.id=s.meeting_id WHERE m.status='ready' AND NOT (m.samling='20251' AND m.date>='2026-04-10' AND m.date<'2026-10-06')"),
       env.DB.prepare("SELECT COUNT(*) n FROM podcasts"),
       env.DB.prepare("SELECT COUNT(*) n FROM podcasts WHERE date IS NOT NULL"),
       env.DB.prepare("SELECT id,title,date,source_url,speech_count FROM meetings WHERE status='ready' ORDER BY imported_at DESC LIMIT 15")
