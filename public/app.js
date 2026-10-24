@@ -1,3 +1,4 @@
+import { initMonitor } from "./monitor.js";
 const $=x=>document.getElementById(x);
 const state={rows:[],stats:null,q:"",speaker:"",favorites:false,playing:null,pending:null,loading:false,transcriptRequestId:0,searchRequestId:0,adminSession:false};
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -413,8 +414,24 @@ function bind(){
  }).catch(()=>{$("archiveState").textContent="Arkivstatus er midlertidigt utilgængelig.";});
 
 }
-bind();
-// Show the browser's real blinking text caret only on desktop, without popping
-// up a software keyboard when the page opens on mobile devices.
-if(window.matchMedia("(pointer:fine)").matches) $("query").focus({preventScroll:true});
-stats().catch(e=>notice("API er ikke klar: "+e.message,true));
+// Initialize the application only when the physical monitor has power.
+// Returning to a powered-on tab restores the terminal without replaying boot.
+let appInitialized=false;
+function startTerminal(){
+ if(!appInitialized){
+   appInitialized=true;
+   bind();
+   stats().catch(e=>notice("API er ikke klar: "+e.message,true));
+ }
+ // The native text caret is the terminal's only continuously blinking element.
+ // Avoid opening a software keyboard without a tap on phones/tablets.
+ if(window.matchMedia("(pointer:fine)").matches) $("query").focus({preventScroll:true});
+}
+initMonitor({
+ onReady:startTerminal,
+ onShutdown:()=>{
+   $("sampleAudio").pause();
+   if($("playerDialog").open)$("playerDialog").close();
+   if($("importDialog").open)$("importDialog").close();
+ }
+});
