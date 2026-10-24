@@ -65,17 +65,23 @@ function rssEntries(xml,feed) {
     if(!enc)continue;
     const attr=enc[0].match(/\burl\s*=\s*["']([^"']+)["']/i);
     if(!attr)continue;
-    const url=stripXml(attr[1]);
+    let url=stripXml(attr[1]);
     let parsed;
     try{parsed=new URL(url);}catch{continue;}
     if(!["https:","http:"].includes(parsed.protocol))continue;
+    // Folketinget publishes Kaltura MP3 links as HTTP. HTTPS was verified
+    // against the 21 Jan 2026 recording and avoids browser mixed content.
+    if(parsed.hostname==="cdnapi.kaltura.com" && parsed.protocol==="http:"){
+      parsed.protocol="https:"; url=parsed.toString();
+    }
     const title=tag(item,"title");
     const desc=tag(item,"description");
     const link=tag(item,"link");
-    // Do NOT use pubDate: upload date and meeting date are different.
+    // Use the meeting date from the title, not the podcast publication date.
     const date=isoDate(title)||isoDate(desc)||isoDate(link)||isoDate(url);
-    entries.push({mp3_url:url,title: title||"Optagelse",description:desc.slice(0,1800),
-      episode_url:/^https?:\/\//.test(link)?link:"",date,feed});
+    const meetingNo=desc.match(/Møde\s+nr\.?\s*(\d{1,3})\s+i\s+salen/i);
+    entries.push({mp3_url:url,title:title||"Optagelse",description:desc.slice(0,1800),
+      episode_url:url,date,feed,meeting_no:meetingNo?Number(meetingNo[1]):null});
   }
   return entries;
 }
@@ -95,6 +101,34 @@ async function authorized(request,env) {
   const [ha,hb]=await Promise.all([crypto.subtle.digest("SHA-256",a),crypto.subtle.digest("SHA-256",b)]);
   return crypto.subtle.timingSafeEqual(new Uint8Array(ha),new Uint8Array(hb));
 }
+// The official podcast RSS contains meeting IDs in the item description.
+// We match BOTH date and meeting number, never date alone (multiple recordings per day).
+function podcastMeetingNo(p) {
+  if(Number.isInteger(p.meeting_no))return p.meeting_no;
+  const match=String(p.description||"").match(/Møde\s+nr\.?\s*(\d{1,3})\s+i\s+salen/i);
+  return match?Number(match[1]):null;
+}
+function findMeetingAudio(items,row) {
+  return items.filter(p=>p.date===row.date && podcastMeetingNo(p)===Number(row.meeting_no))
+    .sort((a,b)=>{
+      const unsuitable=p=>/tegnsprog/i.test(p.title+" "+(p.description||"").slice(0,100))?1:0;
+      return unsuitable(a)-unsuitable(b);
+    }).slice(0,3).map(p=>({mp3_url:p.mp3_url,title:p.title,date:p.date,episode_url:p.episode_url,feed:p.feed}));
+}
+let liveFeed=null;
+let liveFeedExpiry=0;
+async function liveSalenPodcasts() {
+  if(liveFeed && Date.now()<liveFeedExpiry)return liveFeed;
+  const upstream=await fetch(FEEDS.Salen,{headers:{"Accept":"application/rss+xml, application/xml"},cf:{cacheTtl:600}});
+  if(!upstream.ok)throw new Error("Folketingets RSS-feed svarede "+upstream.status);
+  const xml=await upstream.text();
+  if(xml.length>8_000_000)throw new Error("RSS-feed er større end forventet");
+  const entries=rssEntries(xml,"Salen");
+  if(!entries.length)throw new Error("Ingen lydlinks fundet i RSS-feedet");
+  liveFeed=entries;
+  liveFeedExpiry=Date.now()+10*60*1000;
+  return entries;
+}
 async function findSpeeches(env,params) {
   const q=(params.get("q")||"").trim().slice(0,160);
   const speaker=(params.get("speaker")||"").trim().slice(0,120);
@@ -106,25 +140,44 @@ async function findSpeeches(env,params) {
     clauses.push("lower(s.content) LIKE ? ESCAPE '!'");
     binds.push("%"+escapeLike(token.toLowerCase())+"%");
   }
-  if(speaker){clauses.push("lower(s.speaker) LIKE ? ESCAPE '!'");binds.push("%"+escapeLike(speaker.toLowerCase())+"%");}
+  if(speaker){clauses.push("lower(s.speaker) LIKE ? ESCAPE '!'");
+    binds.push("%"+escapeLike(speaker.toLowerCase())+"%");}
   if(fav) clauses.push("f.speech_id IS NOT NULL");
   const sql="SELECT s.id,s.meeting_id,s.speaker,s.clock,s.content,s.page,m.date,m.title,m.meeting_no,m.samling,m.source_url,"+
     "CASE WHEN f.speech_id IS NULL THEN 0 ELSE 1 END favorite,"+
     "(SELECT MIN(clock) FROM speeches x WHERE x.meeting_id=s.meeting_id) first_clock "+
     "FROM speeches s JOIN meetings m ON m.id=s.meeting_id LEFT JOIN favorites f ON f.speech_id=s.id "+
     "WHERE "+clauses.join(" AND ")+" ORDER BY m.date DESC,s.clock ASC LIMIT 120";
-  const r=await env.DB.prepare(sql).bind(...binds).all();
-  const results=r.results||[];
-  const cache=new Map();
-  for(const row of results) {
-    if(!cache.has(row.date)){
-      const p=row.date?await env.DB.prepare("SELECT title,mp3_url,episode_url,date,feed FROM podcasts WHERE date=? AND feed='Salen' LIMIT 4").bind(row.date).all():{results:[]};
-      cache.set(row.date,p.results||[]);
+  const result=await env.DB.prepare(sql).bind(...binds).all();
+  const rows=result.results||[];
+  const dbByDate=new Map(),missing=[];
+  for(const row of rows) {
+    if(!dbByDate.has(row.date)){
+      const p=row.date?await env.DB.prepare(
+        "SELECT title,mp3_url,episode_url,date,description,feed FROM podcasts WHERE date=? AND feed='Salen' LIMIT 25"
+      ).bind(row.date).all():{results:[]};
+      dbByDate.set(row.date,p.results||[]);
     }
-    row.podcasts=cache.get(row.date);
+    row.podcasts=findMeetingAudio(dbByDate.get(row.date),row);
     row.favorite=!!row.favorite;
+    row.audio_source=row.podcasts.length?"indexed":"unmatched";
+    if(!row.podcasts.length && row.date)missing.push(row);
   }
-  return results;
+  // Self-healing: matches appear even if the user has never clicked "Update audio index".
+  // The feed is fetched only when some result is missing a matching podcast.
+  if(missing.length) {
+    try{
+      const fromFeed=await liveSalenPodcasts();
+      for(const row of missing){
+        row.podcasts=findMeetingAudio(fromFeed,row);
+        row.audio_source=row.podcasts.length?"live":"not_in_feed";
+      }
+    }catch(e){
+      console.warn("RSS live lookup unavailable:",String(e));
+      for(const row of missing)row.audio_source="feed_unavailable";
+    }
+  }
+  return rows;
 }
 async function endpoint(request,env,url) {
   await init(env);
