@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
-import {searchTokens,matchesSearchTerms,findSpeeches} from "../src/worker.js";
+import {searchTokens,matchesSearchTerms,ftsQuery,findSpeeches} from "../src/worker.js";
 
 test("ulv matches a complete word, not pulver or ulven",()=>{
   assert.deepEqual(searchTokens("ULV, angst!"),["ulv","angst"]);
@@ -13,28 +13,34 @@ test("ulv matches a complete word, not pulver or ulven",()=>{
   assert.equal(matchesSearchTerms("Det er uacceptabelt.",["accept"]),false);
 });
 
-test("search paginates beyond early false-positive substring hits",async()=>{
-  const speeches=Array.from({length:225},(_,i)=>({
-    id:"20251_M41:"+i,idx:i,meeting_id:"20251_M41",speaker:"Taler",clock:"13:00",
-    content:i===217?"Her taler vi om en ulv!":"Pulver til alle!",page:1,
-    date:null,meeting_no:41,samling:"20251",title:"Møde",source_url:"https://example.org/p",
-    first_clock:"13:00",favorite:0
-  }));
-  const db={prepare(sql){
-    const o={args:[],bind(...args){this.args=args;return this;},
-      async all(){
-        if(sql.includes("FROM speeches s JOIN meetings")){
-          const size=this.args.at(-2),offset=this.args.at(-1);
-          return {results:speeches.slice(offset,offset+size)};
-        }
-        return {results:[]};
-      }
+test("FTS5 uses whole words and bounded indexed candidate rows",async()=>{
+  assert.equal(ftsQuery(["ulv"],""),'content:"ulv"');
+  assert.equal(ftsQuery(["problemulv"],"Mette Thi"),'content:"problemulv" AND speaker:"mette"* AND speaker:"thi"*');
+  const samples=[
+    {id:"20251_M41:1",idx:1,meeting_id:"20251_M41",speaker:"Mette",clock:"13:00",
+      content:"Ulven er løs, men vi taler om en ulv.",date:"2026-01-21",
+      meeting_no:41,samling:"20251",source_url:"https://example.org/ref",favorite:0}
+  ];
+  const sqls=[],db={prepare(sql){
+    sqls.push(sql);
+    return {args:[],bind(...args){this.args=args;return this;},
+      async first(){return {value:"1"};},
+      async all(){return {results:sql.includes("WITH hits AS MATERIALIZED")?samples:[]};}
     };
-    return o;
   }};
-  const found=await findSpeeches({DB:db},new URLSearchParams({q:"ulv"}));
-  assert.equal(found.length,1);
-  assert.equal(found[0].idx,217);
+  const rows=await findSpeeches({DB:db},new URLSearchParams({q:"ulv"}));
+  assert.equal(rows.length,1);
+  assert.equal(rows[0].content,samples[0].content);
+  assert.ok(sqls.some(s=>s.includes("speech_fts MATCH ? LIMIT 1000")));
+  assert.ok(sqls.every(s=>!s.includes("LIKE '%")));
+  assert.ok(sqls.every(s=>!s.includes("SELECT MIN(clock)")));
+});
+
+test("FTS search does not fall back to expensive scans while index is incomplete",async()=>{
+  const sqls=[];
+  const db={prepare(sql){sqls.push(sql);return {async first(){return null;}};}};
+  await assert.rejects(findSpeeches({DB:db},new URLSearchParams({q:"ulv"})),/klargøres/);
+  assert.equal(sqls.length,1);
 });
 
 test("search markup submits on Enter and highlights whole words only",()=>{
