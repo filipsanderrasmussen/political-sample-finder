@@ -113,7 +113,7 @@ function findMeetingAudio(items,row) {
     .sort((a,b)=>{
       const unsuitable=p=>/tegnsprog/i.test(p.title+" "+(p.description||"").slice(0,100))?1:0;
       return unsuitable(a)-unsuitable(b);
-    }).slice(0,3).map(p=>({mp3_url:p.mp3_url,title:p.title,date:p.date,episode_url:p.episode_url,feed:p.feed}));
+    }).slice(0,3).map(p=>{const secure=u=>String(u||"").replace(/^http:\/\/cdnapi\.kaltura\.com\//i,"https://cdnapi.kaltura.com/");return {mp3_url:secure(p.mp3_url),title:p.title,date:p.date,episode_url:secure(p.mp3_url),feed:p.feed};});
 }
 let liveFeed=null;
 let liveFeedExpiry=0;
