@@ -347,4 +347,4 @@ export default {
     })().catch(err=>console.error("Scheduled transcript import:",err)));
   }
 };
-export { isoDate, rssEntries, safeMeeting, findMeetingAudio, contextParams, searchTokens, matchesSearchTerms };
+export { isoDate, rssEntries, safeMeeting, findMeetingAudio, contextParams, searchTokens, matchesSearchTerms, findSpeeches };
