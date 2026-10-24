@@ -19,11 +19,12 @@ export async function archiveManifest(env) {
 }
 export async function archiveStatus(env,manifest=null) {
   const items=manifest||await archiveManifest(env);
-  const res=await env.DB.prepare("SELECT id,status,speech_count FROM meetings").all();
+  const res=await env.DB.prepare("SELECT id,status,speech_count,date,source_url FROM meetings").all();
   const states=new Map((res.results||[]).map(x=>[x.id,x]));
-  const ready=items.filter(m=>states.get(m.id)?.status==="ready");
+  const sourceMatches=(m,db)=>db && db.date===m.date && db.source_url===m.source_url;
+  const ready=items.filter(m=>states.get(m.id)?.status==="ready" && sourceMatches(m,states.get(m.id)));
   const active=items.filter(m=>states.get(m.id)?.status==="syncing");
-  const remaining=items.filter(m=>!["ready","importing"].includes(states.get(m.id)?.status));
+  const remaining=items.filter(m=>!((states.get(m.id)?.status==="ready" && sourceMatches(m,states.get(m.id))) || states.get(m.id)?.status==="importing"));
   return {
     archive_meetings:items.length,
     archive_speeches:items.reduce((n,x)=>n+(Number(x.speeches)||0),0),
@@ -36,10 +37,11 @@ export async function archiveStatus(env,manifest=null) {
 export async function syncArchiveBatch(env) {
   const manifest=await archiveManifest(env);
   if(!manifest.length)return {done:true,reason:"Arkivmanifests ikke tilgængeligt endnu.",...await archiveStatus(env,manifest)};
-  const current=await env.DB.prepare("SELECT id,status FROM meetings").all();
-  const statuses=new Map((current.results||[]).map(m=>[m.id,m.status]));
+  const current=await env.DB.prepare("SELECT id,status,date,source_url FROM meetings").all();
+  const statuses=new Map((current.results||[]).map(m=>[m.id,m]));
+  const sameSource=m=>statuses.get(m.id)?.date===m.date && statuses.get(m.id)?.source_url===m.source_url;
   // Include interrupted automatic imports, but respect a manual import in progress.
-  const target=manifest.find(m=>statuses.get(m.id)!=="ready"&&statuses.get(m.id)!=="importing");
+  const target=manifest.find(m=>!(statuses.get(m.id)?.status==="ready"&&sameSource(m)) && statuses.get(m.id)?.status!=="importing");
   if(!target)return {done:true,...await archiveStatus(env,manifest)};
   const data=await readAssetJSON(env,PREFIX+target.id+".json");
   if(data.id!==target.id||!Array.isArray(data.speeches)||!data.speeches.length)
@@ -47,16 +49,28 @@ export async function syncArchiveBatch(env) {
   if(data.speeches.length!==target.speeches)
     throw new Error("Arkivets antal taleindlæg er inkonsistent: "+target.id);
   let progress=0;
-  if(statuses.get(target.id)==="syncing"){
+  if(statuses.get(target.id)?.status==="syncing" && sameSource(target)){
     const found=await env.DB.prepare("SELECT MAX(idx) last_idx FROM speeches WHERE meeting_id=?")
       .bind(target.id).first();
     progress=(found?.last_idx??-1)+1;
   }else{
-    await env.DB.batch([
-      env.DB.prepare("INSERT INTO meetings (id,samling,meeting_no,date,title,source_url,status,speech_count,imported_at) VALUES (?,?,?,?,?,?,'syncing',0,?) ON CONFLICT(id) DO UPDATE SET status='syncing',date=excluded.date,title=excluded.title,source_url=excluded.source_url,imported_at=excluded.imported_at")
-        .bind(target.id,target.samling,Number(target.meeting_no),target.date,"Møde "+target.meeting_no+" · "+target.samling,target.source_url,new Date().toISOString()),
-      env.DB.prepare("DELETE FROM speeches WHERE meeting_id=?").bind(target.id)
-    ]);
+    const stale=!!statuses.get(target.id) && !sameSource(target);
+    const queries=[];
+    if(stale){
+      // Preserve existing user favorites from the incorrectly attributed
+      // sitting rather than silently remapping them to different speeches.
+      queries.push(env.DB.prepare(
+        "INSERT OR IGNORE INTO archived_favorites(id,meeting_id,source_date,speaker,clock,content,archived_at) "+
+        "SELECT f.speech_id,s.meeting_id,m.date,s.speaker,s.clock,s.content,? "+
+        "FROM favorites f JOIN speeches s ON s.id=f.speech_id JOIN meetings m ON m.id=s.meeting_id "+
+        "WHERE s.meeting_id=?"
+      ).bind(new Date().toISOString(),target.id));
+      queries.push(env.DB.prepare("DELETE FROM favorites WHERE speech_id IN (SELECT id FROM speeches WHERE meeting_id=?)").bind(target.id));
+    }
+    queries.push(env.DB.prepare("INSERT INTO meetings (id,samling,meeting_no,date,title,source_url,status,speech_count,imported_at) VALUES (?,?,?,?,?,?,'syncing',0,?) ON CONFLICT(id) DO UPDATE SET status='syncing',date=excluded.date,title=excluded.title,source_url=excluded.source_url,imported_at=excluded.imported_at")
+        .bind(target.id,target.samling,Number(target.meeting_no),target.date,"Møde "+target.meeting_no+" · "+target.samling,target.source_url,new Date().toISOString()));
+    queries.push(env.DB.prepare("DELETE FROM speeches WHERE meeting_id=?").bind(target.id));
+    await env.DB.batch(queries);
   }
   const chunk=data.speeches.slice(progress,progress+100),queries=[];
   for(let i=0;i<chunk.length;i++){
