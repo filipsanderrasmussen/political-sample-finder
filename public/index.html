@@ -18,8 +18,7 @@
       <p class="hero-subline" aria-hidden="true">───────────────────────── <span>///</span> ─────────────────────────</p>
     </section>
     <form class="searchpanel" id="searchForm" role="search">
-      <div class="search-header"><label for="query">01 / SØG I ARKIVET</label><span class="search-ready" aria-hidden="true">KLAR</span></div>
-      <div class="searchbar"><span class="terminal-prompt" aria-hidden="true">&gt;</span><input id="query" name="q" type="search" enterkeyhint="search" placeholder="problemulv" autocomplete="off" spellcheck="false" aria-label="Søg efter ord eller fraser"><button id="searchBtn" type="submit" class="button primary">SØG <span aria-hidden="true">↵</span></button></div>
+      <div class="searchbar"><span class="terminal-prompt" aria-hidden="true">&gt;</span><input id="query" name="q" type="search" enterkeyhint="search" placeholder="Angiv søgestreng" autocomplete="off" spellcheck="false" aria-label="Søg efter ord eller fraser"><button id="searchBtn" type="submit" class="button primary">SØG <span aria-hidden="true">↵</span></button></div>
       <div class="stat-grid" aria-label="Arkivets størrelse">
         <div class="stat-cell"><span class="stat-label">SØGBARE MØDER</span><strong id="statMeetings" class="stat-value">---</strong></div>
         <div class="stat-cell"><span class="stat-label">TALEAFSNIT</span><strong id="statSpeeches" class="stat-value">------</strong></div>
@@ -27,10 +26,7 @@
       </div>
       <span id="stats" class="sr-only" aria-live="polite">Indlæser arkivstatus</span>
       <div class="search-options">
-        <div class="quicksearch"><span class="quick-label">02 / HURTIGSØGNINGER</span><div class="quick-pads">
-          <button type="button" data-query="problemulv">problemulv</button><button type="button" data-query="ansvar">ansvar</button><button type="button" data-query="krise">krise</button><button type="button" data-query="ulv">ulv</button><button type="button" data-query="klima">klima</button><button type="button" data-query="skat">skat</button>
-        </div></div>
-        <label class="speakerfilter" for="speaker">03 / FILTRÉR TALER<input id="speaker" placeholder="Navn på taler…" autocomplete="off"></label>
+        <input class="speakerfilter" id="speaker" type="search" placeholder="Filtrér på taler (valgfrit)" aria-label="Filtrér på taler" autocomplete="off">
       </div>
     </form>
     <section class="results-head" aria-label="Søgeresultater">
