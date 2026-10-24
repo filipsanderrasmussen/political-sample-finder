@@ -1,38 +1,48 @@
 <!doctype html>
 <html lang="da"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#111a18">
+<meta name="theme-color" content="#030a06">
 <title>Political Sample Finder</title>
 <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-<header class="topbar">
-  <div class="brand"><span class="brand-icon">◉</span><span>POLITICAL<br><b>SAMPLE FINDER</b></span></div>
-  <div class="top-right"><span id="stats">Henter statistik…</span><button id="openImport" class="button outline">Arkivstatus</button></div>
-</header>
-<main class="shell">
-  <section class="hero">
-    <div class="eyebrow">FOLKETINGET · STEMMER · SAMPLING</div>
-    <h1>Find ordene.<br><em>Hør stemmen.</em></h1>
-    <p>Søg i Folketingets referater, find omtrent hvor ordene blev sagt, og åbn den originale lydoptagelse.</p>
-  </section>
-  <form class="searchpanel" id="searchForm" role="search">
-    <label for="query">SØG I TALERNE</label>
-    <div class="searchbar"><span aria-hidden="true">⌕</span><input id="query" name="q" type="search" enterkeyhint="search" placeholder="Eksempel: fuldstændig vanvittigt" autocomplete="off"><button id="searchBtn" type="submit" class="button primary">Søg →</button></div>
-    <div class="search-options">
-      <label class="speakerfilter">POLITIKER <input id="speaker" placeholder="Filtrér efter navn"></label>
-      <div class="quicksearch"><span>PRØV:</span><button type="button" data-query="ansvar">ansvar</button><button type="button" data-query="stoppe">stoppe</button><button type="button" data-query="igen">igen</button></div>
-    </div>
-  </form>
-  <section class="results-head">
-    <div class="tabs" role="tablist"><button id="allTab" class="selected" role="tab" aria-selected="true">Alle fund</button><button id="favTab" role="tab" aria-selected="false">★ Favoritter</button></div>
-    <span id="count">0 MATCHES</span>
-  </section>
-  <div id="notification" role="status" class="notification hidden"></div>
-  <div id="results"></div>
-  <div id="empty" class="empty"><span class="empty-symbol">♫</span><h2>Først skal der lidt tale på pladen.</h2><p>Indlæs et referat, så bliver originale politiske udtalelser søgbare.</p><button class="button primary" id="emptyImport">Indlæs første møde →</button></div>
-  <footer>Referatklokkeslæt angiver starten af et talerindlæg, ikke sekundet for søgeordet. Podcastlinks er foreløbige datomatch, ikke verificeret synkronisering.</footer>
-</main>
+<div class="terminal-frame">
+  <header class="topbar">
+    <div class="brand"><span class="brand-led" aria-hidden="true"></span><span>PSF<span class="brand-slash"> //</span> FOLKETINGET</span></div>
+    <div class="top-right"><span class="system-version">ARCHIVE / v1.0</span><button id="openImport" type="button" class="button outline">[ ARKIVSTATUS ]</button></div>
+  </header>
+  <main class="shell">
+    <section class="hero" aria-labelledby="siteTitle">
+      <div class="hero-command" aria-hidden="true"><span>● SYSTEM ONLINE</span><span>FOLKETINGETS ORD / ORIGINAL LYD</span></div>
+      <h1 id="siteTitle"><span>POLITICAL</span><span>SAMPLE FINDER</span></h1>
+      <p class="hero-subline" aria-hidden="true">───────────────────────── <span>///</span> ─────────────────────────</p>
+    </section>
+    <form class="searchpanel" id="searchForm" role="search">
+      <div class="search-header"><label for="query">01 / SØG I ARKIVET</label><span class="search-ready" aria-hidden="true">READY<span class="blinking-cursor">_</span></span></div>
+      <div class="searchbar"><span class="terminal-prompt" aria-hidden="true">&gt;</span><input id="query" name="q" type="search" enterkeyhint="search" placeholder="problemulv" autocomplete="off" spellcheck="false" aria-label="Søg efter ord eller fraser"><button id="searchBtn" type="submit" class="button primary">SØG <span aria-hidden="true">↵</span></button></div>
+      <div class="stat-grid" aria-label="Arkivets størrelse">
+        <div class="stat-cell"><span class="stat-label">SØGBARE MØDER</span><strong id="statMeetings" class="stat-value">---</strong></div>
+        <div class="stat-cell"><span class="stat-label">TALEAFSNIT</span><strong id="statSpeeches" class="stat-value">------</strong></div>
+        <div class="stat-cell"><span class="stat-label">LYDKILDER</span><strong id="statAudio" class="stat-value">---</strong></div>
+      </div>
+      <span id="stats" class="sr-only" aria-live="polite">Indlæser arkivstatus</span>
+      <div class="search-options">
+        <div class="quicksearch"><span class="quick-label">02 / HURTIGSØGNINGER</span><div class="quick-pads">
+          <button type="button" data-query="problemulv">problemulv</button><button type="button" data-query="ansvar">ansvar</button><button type="button" data-query="krise">krise</button><button type="button" data-query="ulv">ulv</button><button type="button" data-query="klima">klima</button><button type="button" data-query="skat">skat</button>
+        </div></div>
+        <label class="speakerfilter" for="speaker">03 / FILTRÉR TALER<input id="speaker" placeholder="Navn på taler…" autocomplete="off"></label>
+      </div>
+    </form>
+    <section class="results-head" aria-label="Søgeresultater">
+      <div class="tabs" role="tablist"><button id="allTab" class="selected" role="tab" aria-selected="true" type="button">[ ALLE FUND ]</button><button id="favTab" role="tab" aria-selected="false" type="button">[ ★ FAVORITTER ]</button></div>
+      <span id="count" aria-live="polite">KLAR TIL SØGNING</span>
+    </section>
+    <div id="notification" role="status" class="notification hidden"></div>
+    <div id="results" aria-live="polite"></div>
+    <div id="empty" class="empty"><span class="empty-symbol" aria-hidden="true">&gt;_</span><h2>AWAITING INPUT<span class="blinking-cursor">_</span></h2><p>Skriv et ord, eller vælg en hurtigsøgning ovenfor.</p><button class="button outline" type="button" id="emptyImport">[ ARKIVSTATUS ]</button></div>
+    <footer><span>PSF / UNOFFICIAL ARCHIVE INTERFACE</span><span>ORIGINALT LYDMATERIALE: FOLKETINGET</span><span>ESTIMEREDE TIDSPOSITIONER</span></footer>
+  </main>
+</div>
 <dialog id="importDialog" class="dialog"><div class="dialog-content">
  <div class="dialog-head"><div><div class="eyebrow">POLITICAL SAMPLE FINDER</div><h2>Arkivstatus</h2></div><button class="close" id="closeImport" aria-label="Luk">×</button></div>
  <p class="intro">Lydlinks og søgbare referater bliver automatisk opdateret. Du behøver normalt ikke gøre noget.</p>
