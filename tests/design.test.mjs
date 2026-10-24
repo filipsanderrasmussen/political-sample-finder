@@ -17,6 +17,10 @@ test("phosphor terminal homepage keeps search controls and no marketing hero",()
   assert.match(html,/id="query"/);
   assert.match(html,/id="speaker"/);
   assert.match(html,/id="searchBtn" type="submit"/);
+  assert.match(html,/id="query"[^>]*placeholder="Angiv søgestreng"/);
+  assert.match(html,/id="speaker"[^>]*aria-label="Filtrér på taler"/);
+  assert.doesNotMatch(html,/data-query=|HURTIGSØGNINGER|01 \/ SØG I ARKIVET|03 \/ FILTRÉR TALER/);
+  assert.doesNotMatch(js,/quick-pads|\[data-query\]/);
   assert.doesNotMatch(html,/Find ordene\.|Hør stemmen\.|Søg i Folketingets referater, find omtrent|SYSTEM ONLINE|READY|AWAITING INPUT|SAMPLE FINDER/);
 });
 
