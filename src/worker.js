@@ -210,15 +210,18 @@ async function findSpeeches(env,params) {
     const ready=await env.DB.prepare("SELECT value FROM app_meta WHERE key='fts_ready'").first();
     if(ready?.value!=="1")throw new Error("Søgeindekset klargøres efter Cloudflares kvotenulstilling. Prøv igen senere.");
   }
+  // FTS5 can match common words in nearly every speech. Materialize at most
+  // 1,000 candidate rowids before joining/sorting so row reads remain bounded.
+  const candidates=match?
+    "WITH hits AS MATERIALIZED (SELECT rowid FROM speech_fts WHERE speech_fts MATCH ? LIMIT 1000) ":"";
   const base="SELECT s.id,s.idx,s.meeting_id,s.speaker,s.clock,s.content,s.page,m.date,m.title,m.meeting_no,m.samling,m.source_url,"+
     "CASE WHEN f.speech_id IS NULL THEN 0 ELSE 1 END favorite "+
-    "FROM "+(match?"speech_fts JOIN speeches s ON s.rowid=speech_fts.rowid":"favorites favorite_index JOIN speeches s ON s.id=favorite_index.speech_id")+
+    "FROM "+(match?"hits JOIN speeches s ON s.rowid=hits.rowid":"favorites favorite_index JOIN speeches s ON s.id=favorite_index.speech_id")+
     " JOIN meetings m ON m.id=s.meeting_id LEFT JOIN favorites f ON f.speech_id=s.id ";
   const conditions=["m.status='ready'",
     "NOT (m.samling='20251' AND m.date >= '2026-04-10' AND m.date < '2026-10-06')"];
-  if(match)conditions.push("speech_fts MATCH ?");
   if(fav)conditions.push("f.speech_id IS NOT NULL");
-  const sql=base+" WHERE "+conditions.join(" AND ")+
+  const sql=candidates+base+" WHERE "+conditions.join(" AND ")+
     " ORDER BY m.date DESC,s.clock ASC,s.idx ASC LIMIT 120";
   const r=match?await env.DB.prepare(sql).bind(match).all():await env.DB.prepare(sql).all();
   const rows=r.results||[];
