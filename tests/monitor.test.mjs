@@ -63,6 +63,8 @@ function fakeEnvironment({remembered=false,reduced=false}={}){
 test("real-world monitor is edge-to-edge with a physical switch; dialogs remain available",()=>{
   assert.match(html,/class="monitor-shell" id="monitorShell" data-power="off"/);
   assert.match(html,/id="monitorBoot"/);
+  assert.match(html,/<div class="monitor-offline" id="monitorOffline" aria-hidden="true"><\/div>/);
+  assert.doesNotMatch(html,/SKÆRM SLUKKET|Tryk på tændknappen under skærmen/);
   assert.match(html,/id="monitorPower"[^>]*aria-label="Tænd skærmen"/);
   assert.match(html,/id="terminalFrame" inert aria-hidden="true"/);
   assert.match(html,/id="playerDialog"/);
@@ -71,6 +73,12 @@ test("real-world monitor is edge-to-edge with a physical switch; dialogs remain 
   assert.match(css,/\.monitor-screen\{[\s\S]*?overflow:auto/);
   assert.match(css,/\.monitor-shell\[data-power="off"\] \.terminal-frame/);
   assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
+  assert.match(css,/--bezel-side:clamp\\(15px,1\\.8vw,30px\\)/);
+  assert.match(css,/--panel-height:74px/);
+  assert.match(css,/\\.monitor-shell\\[data-power="off"\\] \\.monitor-boot\\{display:none\\}/);
+  assert.match(css,/\\.monitor-shell\\[data-power="off"\\] \\.monitor-screen\\{background:#010101/);
+  assert.match(css,/\\.monitor-shell\\[data-power="off"\\]::after\\{display:none\\}/);
+
   assert.match(app,/initMonitor\(\{/);
   assert.match(app,/onShutdown:\(\)=>\{/);
   assert.match(app,/if\(!appInitialized\)\{/);
@@ -136,4 +144,11 @@ test("reduced motion gives short silent startup without text animation",()=>{
     assert.equal(monitor.state,"on");
     assert.equal(ready,1);
   }finally{env.restore()}
+});
+
+test("late-eighties CRT font is loaded with Danish-language capable fallback",()=>{
+  assert.match(html,/fonts\\.googleapis\\.com\\/css2\\?family=VT323/);
+  assert.match(css,/font-family:"VT323",ui-monospace/);
+  assert.match(css,/\\.monitor-controls\\{[^}]*font-family:ui-monospace/);
+  assert.match(css,/\\.hero h1\\{[\\s\\S]*?font-size:clamp\\(60px,8\\.4vw,123px\\)/);
 });
