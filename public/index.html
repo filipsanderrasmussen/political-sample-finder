@@ -56,15 +56,35 @@
  <p id="archiveState" class="feedback" aria-live="polite"></p>
  <hr><p class="legal">Folketingets lyd og tv er beskyttet af brugsbetingelser. Læs betingelserne før bearbejdning eller offentliggørelse af samples.</p>
 </div></dialog>
-<dialog id="playerDialog" class="dialog"><div class="dialog-content">
- <div class="dialog-head"><div><div class="eyebrow">ORIGINAL OPTAGELSE · FORELØBIGT DATO-MATCH</div><h2 id="playerSpeaker">Taler</h2></div><button id="closePlayer" class="close" aria-label="Luk">×</button></div>
- <p class="intro" id="playerContext"></p>
- <audio id="sampleAudio" controls preload="metadata" style="width:100%"></audio>
- <div class="field"><label for="playerStart">MP3'ENS STARTKLOKKESLÆT (JUSTERBART)</label><input id="playerStart" type="time"></div>
- <div class="offsetline"><span>Anslået position i MP3</span><b id="playerOffset">–</b></div>
- <button id="playerSeek" class="button primary full">Afspil fra cirka-position</button>
- <p id="playerStatus" class="feedback"></p><p id="playerAnchorHelp" class="field-help"></p>
- <a id="playerMp3Link" href="#" target="_blank" rel="noopener noreferrer" class="filelink">Åbn hele den originale MP3 ↗</a>
+<dialog id="playerDialog" class="dialog player-dialog" aria-labelledby="playerTitle"><div class="dialog-content">
+ <div class="player-topline">
+  <div class="eyebrow" id="playerTitle">ORIGINAL LYD FRA FOLKETINGET</div>
+  <button id="closePlayer" class="close" aria-label="Luk afspiller">×</button>
+ </div>
+ <p id="playerQuote" class="player-quote"></p>
+ <div class="player-meta"><span id="playerSpeaker"></span><span id="playerContext"></span></div>
+ <section class="player-primary" aria-label="Lydafspiller">
+  <div class="player-position"><span>Cirka i optagelsen</span><strong id="playerOffset">–</strong></div>
+  <audio id="sampleAudio" controls preload="metadata" aria-label="Original MP3-lyd"></audio>
+  <div class="player-controls">
+   <button id="playerBack" type="button" class="skip-button" aria-label="15 sekunder tilbage">−15 sek.</button>
+   <button id="playerSeek" type="button" class="button primary player-play">▶ Afspil fra tidspunkt</button>
+   <button id="playerForward" type="button" class="skip-button" aria-label="15 sekunder frem">+15 sek.</button>
+  </div>
+  <p id="playerStatus" class="player-status" role="status"></p>
+ </section>
+ <details class="player-advanced">
+  <summary>Rammer tidspunktet ved siden af? Justér her</summary>
+  <div class="player-adjust">
+   <label for="playerStart">Optagelsens startklokkeslæt</label>
+   <input id="playerStart" type="time">
+   <p id="playerAnchorHelp" class="field-help">Klokkeslættet gemmes for denne MP3 i din browser.</p>
+  </div>
+ </details>
+ <div class="player-footer">
+  <a id="playerMp3Link" href="#" target="_blank" rel="noopener noreferrer">Åbn hele MP3-filen ↗</a>
+  <span>Tidspositionen er vejledende.</span>
+ </div>
 </div></dialog>
 <script type="module" src="/app.js"></script>
 </body></html>
