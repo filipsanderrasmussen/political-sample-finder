@@ -15,7 +15,8 @@ const SCHEMA = [
   "CREATE TABLE IF NOT EXISTS podcasts (mp3_url TEXT PRIMARY KEY, title TEXT NOT NULL, date TEXT, episode_url TEXT, description TEXT, feed TEXT)",
   "CREATE INDEX IF NOT EXISTS podcast_date_idx ON podcasts(date)",
   "CREATE TABLE IF NOT EXISTS favorites (speech_id TEXT PRIMARY KEY, added_at TEXT NOT NULL)",
-  "CREATE TABLE IF NOT EXISTS archived_favorites (id TEXT PRIMARY KEY, meeting_id TEXT NOT NULL, source_date TEXT, speaker TEXT, clock TEXT, content TEXT, archived_at TEXT NOT NULL)"
+  "CREATE TABLE IF NOT EXISTS archived_favorites (id TEXT PRIMARY KEY, meeting_id TEXT NOT NULL, source_date TEXT, speaker TEXT, clock TEXT, content TEXT, archived_at TEXT NOT NULL)",
+  "CREATE TABLE IF NOT EXISTS app_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)"
 ].join(";\n") + ";";
 async function init(env) {
   if (!env.DB) throw new Error("D1-databasen DB mangler. Kontrollér Cloudflare-bindingen.");
@@ -185,42 +186,41 @@ function matchesSearchTerms(content,terms){
   const found=new Set(searchTokens(content));
   return terms.every(t=>found.has(t.toLocaleLowerCase("da-DK")));
 }
+// Search uses FTS5's inverted index. Do not fall back to LIKE '%word%':
+// it scans ~80,000 speeches per query and exhausts D1's daily row-read cap.
+function ftsLiteral(s){
+  return '"'+String(s).replace(/"/g,'""')+'"';
+}
+function ftsQuery(terms,speaker){
+  const bits=terms.map(t=>"content:"+ftsLiteral(t));
+  // Name filter uses indexed word prefixes so "Mett" can match "Mette".
+  for(const t of searchTokens(speaker))bits.push("speaker:"+ftsLiteral(t)+"*");
+  return bits.join(" AND ");
+}
 async function findSpeeches(env,params) {
   const q=(params.get("q")||"").trim().slice(0,160);
   const speaker=(params.get("speaker")||"").trim().slice(0,120);
   const fav=params.get("favorites")==="1";
-  if(!q && !speaker && !fav)return [];
-  const terms=searchTokens(q).slice(0,10);
-  const clauses=["m.status='ready'",
-    // Quarantine stale first-sitting records erroneously dated in the second.
-    "NOT (m.samling='20251' AND m.date >= '2026-04-10' AND m.date < '2026-10-06')"], binds=[];
-  const escapeLike=s=>s.replace(/!/g,"!!").replace(/%/g,"!%").replace(/_/g,"!_");
-  for(const term of terms) {
-    clauses.push("lower(s.content) LIKE ? ESCAPE '!'");
-    binds.push("%"+escapeLike(term.toLowerCase())+"%");
+  if(!q&&!speaker&&!fav)return [];
+  const terms=searchTokens(q).slice(0,10),match=ftsQuery(terms,speaker);
+  // All text searches require the index. An incomplete index is never
+  // silently replaced with an expensive table scan.
+  if(match){
+    const ready=await env.DB.prepare("SELECT value FROM app_meta WHERE key='fts_ready'").first();
+    if(ready?.value!=="1")throw new Error("Søgeindekset klargøres efter Cloudflares kvotenulstilling. Prøv igen senere.");
   }
-  if(speaker){
-    clauses.push("lower(s.speaker) LIKE ? ESCAPE '!'");
-    binds.push("%"+escapeLike(speaker.toLowerCase())+"%");
-  }
-  if(fav) clauses.push("f.speech_id IS NOT NULL");
-  const sql="SELECT s.id,s.idx,s.meeting_id,s.speaker,s.clock,s.content,s.page,m.date,m.title,m.meeting_no,m.samling,m.source_url,"+
-    "CASE WHEN f.speech_id IS NULL THEN 0 ELSE 1 END favorite,"+
-    "(SELECT MIN(clock) FROM speeches x WHERE x.meeting_id=s.meeting_id) first_clock "+
-    "FROM speeches s JOIN meetings m ON m.id=s.meeting_id LEFT JOIN favorites f ON f.speech_id=s.id "+
-    "WHERE "+clauses.join(" AND ")+" ORDER BY m.date DESC,s.clock ASC,s.idx ASC LIMIT ? OFFSET ?";
-  // Apply the exact-word filter BEFORE the 120-result limit. Otherwise many
-  // early false-positive substrings can hide real matches further down.
-  const rows=[],pageSize=200,maxCandidates=12000;
-  for(let off=0;off<maxCandidates && rows.length<120;off+=pageSize){
-    const data=await env.DB.prepare(sql).bind(...binds,pageSize,off).all();
-    const batch=data.results||[];
-    for(const row of batch){
-      if(matchesSearchTerms(row.content,terms))rows.push(row);
-      if(rows.length>=120)break;
-    }
-    if(batch.length<pageSize)break;
-  }
+  const base="SELECT s.id,s.idx,s.meeting_id,s.speaker,s.clock,s.content,s.page,m.date,m.title,m.meeting_no,m.samling,m.source_url,"+
+    "CASE WHEN f.speech_id IS NULL THEN 0 ELSE 1 END favorite "+
+    "FROM "+(match?"speech_fts JOIN speeches s ON s.rowid=speech_fts.rowid":"favorites favorite_index JOIN speeches s ON s.id=favorite_index.speech_id")+
+    " JOIN meetings m ON m.id=s.meeting_id LEFT JOIN favorites f ON f.speech_id=s.id ";
+  const conditions=["m.status='ready'",
+    "NOT (m.samling='20251' AND m.date >= '2026-04-10' AND m.date < '2026-10-06')"];
+  if(match)conditions.push("speech_fts MATCH ?");
+  if(fav)conditions.push("f.speech_id IS NOT NULL");
+  const sql=base+" WHERE "+conditions.join(" AND ")+
+    " ORDER BY m.date DESC,s.clock ASC,s.idx ASC LIMIT 120";
+  const r=match?await env.DB.prepare(sql).bind(match).all():await env.DB.prepare(sql).all();
+  const rows=r.results||[];
   const dbByDate=new Map(),missing=[];
   for(const row of rows) {
     if(!dbByDate.has(row.date)){
@@ -237,16 +237,22 @@ async function findSpeeches(env,params) {
       if(row.podcasts.length)row.audio_source="official_rss_snapshot";
       else missing.push(row);
     }
+    // The filename encodes the actual MP3 start hour; avoid an expensive
+    // correlated MIN(clock) subquery for each individual search result.
+    const start=row.podcasts[0]?.mp3_url?.match(/\/\d{2}-\d{2}-\d{4}_(\d{2})-(\d{2})_salen\.mp3/i);
+    row.first_clock=start?start[1]+":"+start[2]:row.clock;
   }
-  if(missing.length) {
-    try {
+  if(missing.length){
+    try{
       const fromFeed=await liveSalenPodcasts();
       for(const row of missing){
         row.podcasts=findMeetingAudio(fromFeed,row);
         row.audio_source=row.podcasts.length?"live":"not_in_feed";
+        const start=row.podcasts[0]?.mp3_url?.match(/\/\d{2}-\d{2}-\d{4}_(\d{2})-(\d{2})_salen\.mp3/i);
+        if(start)row.first_clock=start[1]+":"+start[2];
       }
-    }catch(e) {
-      console.warn("RSS live lookup unavailable:",String(e));
+    }catch(err){
+      console.warn("RSS live lookup unavailable:",String(err));
       for(const row of missing)row.audio_source="feed_unavailable";
     }
   }
@@ -277,7 +283,7 @@ async function endpoint(request,env,url) {
   if(method==="GET" && path==="/api/stats"){
     const [meetings,speeches,podcasts,dated,items]=await env.DB.batch([
       env.DB.prepare("SELECT COUNT(*) n FROM meetings WHERE status='ready' AND NOT (samling='20251' AND date>='2026-04-10' AND date<'2026-10-06')"),
-      env.DB.prepare("SELECT COUNT(*) n FROM speeches s JOIN meetings m ON m.id=s.meeting_id WHERE m.status='ready' AND NOT (m.samling='20251' AND m.date>='2026-04-10' AND m.date<'2026-10-06')"),
+      env.DB.prepare("SELECT COALESCE(SUM(speech_count),0) n FROM meetings WHERE status='ready' AND NOT (samling='20251' AND date>='2026-04-10' AND date<'2026-10-06')"),
       env.DB.prepare("SELECT COUNT(*) n FROM podcasts"),
       env.DB.prepare("SELECT COUNT(*) n FROM podcasts WHERE date IS NOT NULL"),
       env.DB.prepare("SELECT id,title,date,source_url,speech_count FROM meetings WHERE status='ready' ORDER BY imported_at DESC LIMIT 15")
@@ -402,4 +408,4 @@ export default {
     })().catch(err=>console.error("Scheduled transcript import:",err)));
   }
 };
-export { isoDate, rssEntries, safeMeeting, findMeetingAudio, contextParams, searchTokens, matchesSearchTerms, findSpeeches, issueSession, validSession };
+export { isoDate, rssEntries, safeMeeting, findMeetingAudio, contextParams, searchTokens, matchesSearchTerms, ftsQuery, findSpeeches, issueSession, validSession };
