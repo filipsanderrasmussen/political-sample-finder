@@ -228,3 +228,6 @@ export default {
     catch(err){console.error("API error:",err);return error(err?.message||"Uventet fejl.",400);}
   }
 };
+
+// Export deterministic helpers for regression tests.
+export { isoDate, rssEntries, safeMeeting };
