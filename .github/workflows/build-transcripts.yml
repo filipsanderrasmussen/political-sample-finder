@@ -3,9 +3,11 @@ on:
   push:
     paths:
       - .github/workflows/build-transcripts.yml
+      - scripts/build_transcript_archive.py
+      - src/audio-index.json
   workflow_dispatch:
   schedule:
-    - cron: "43 5 * * 1"
+    - cron: "43 5 * * *"
 permissions:
   contents: write
 concurrency:
