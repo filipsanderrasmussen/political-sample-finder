@@ -70,7 +70,7 @@ def parse_pdf(raw, expected_date=None, expected_meeting_no=None):
             pdf.close()
             raise ValueError("PDF date does not match podcast date")
     if expected_meeting_no:
-        expected=re.compile(r"\b"+str(expected_meeting_no)+r"\.\s*møde\\b",re.I)
+        expected=re.compile(r"\b"+str(expected_meeting_no)+r"\.\s*møde\b",re.I)
         if not expected.search(first):
             pdf.close()
             raise ValueError("PDF meeting number does not match podcast")
