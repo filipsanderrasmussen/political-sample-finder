@@ -25,7 +25,7 @@ function anchor(url){try{return localStorage.getItem("psf.anchor:"+url);}catch{r
 function storeAnchor(url,val){try{localStorage.setItem("psf.anchor:"+url,val);}catch{}}
 function seconds(row,p){const a=mins(row.clock),b=mins(anchor(p.mp3_url)||row.first_clock||row.clock);return a===null||b===null?null:(a-b)*60;}
 function render(){
- $("stats").textContent=(state.stats?.meetings||0)+" møder · "+(state.stats?.speeches||0)+" taler · "+(state.stats?.podcasts||0)+" lydlinks";
+ $("stats").textContent=(state.stats?.meetings||0)+" møder med søgbar tekst · "+(state.stats?.speeches||0)+" taler · "+(state.stats?.audio_archive_meetings||0)+" møder med MP3";
  $("count").textContent=state.rows.length+" MATCHES"+(state.rows.length===120?" (maks.)":"");
  const empty=$("empty");empty.classList.toggle("hidden",state.loading||state.rows.length>0);
  empty.querySelector("h2").textContent=(state.stats?.speeches||0)?"Ingen taler matcher søgningen.":"Først skal der lidt tale på pladen.";
