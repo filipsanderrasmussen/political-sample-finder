@@ -1,4 +1,5 @@
 import { archiveManifest, archiveStatus, syncArchiveBatch } from "./archive.js";
+import { ensureSearchIndex } from "./search-index.js";
 import offlinePodcastIndex from "./audio-index.json" with { type: "json" };
 // Political Sample Finder — Cloudflare Worker + D1.
 // Source-backed: results only come from imported Folketingstidende PDFs.
@@ -395,13 +396,23 @@ export default {
     const url=new URL(request.url);
     if(!url.pathname.startsWith("/api/"))return env.ASSETS.fetch(request);
     try{return await endpoint(request,env,url);}
-    catch(err){console.error("API error:",err);return error(err?.message||"Uventet fejl.",400);}
+    catch(err){
+      console.error("API error:",err);
+      const message=String(err?.message||"Uventet fejl.");
+      if(/exceeded D1.s free tier daily row read limit/i.test(message))
+        return error("Cloudflare D1 har ramt sin daglige læsekvote. Den nulstilles ved midnat UTC. Søgeoptimeringen er ved at blive installeret.",503);
+      return error(message,400);
+    }
   },
   async scheduled(event,env,ctx){
     ctx.waitUntil((async()=>{
       await init(env);
-      // Multiple bounded chunks per invocation. No public write endpoint.
-      for(let i=0;i<4;i++){
+      // Do the expensive one-time full-text rebuild only from Cron, never
+      // as part of an interactive search. The index then stays in sync.
+      try{await ensureSearchIndex(env);}
+      catch(err){console.error("FTS5 index migration:",err);}
+      // Bound archive updates to keep daily D1 row-read/write quotas low.
+      for(let i=0;i<3;i++){
         const r=await syncArchiveBatch(env);
         if(r.done)break;
       }
