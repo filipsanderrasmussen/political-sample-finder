@@ -94,15 +94,58 @@ async function body(request) {
   if(raw.length>1_800_000)throw new Error("Anmodningen er for stor.");
   try{return JSON.parse(raw);}catch{throw new Error("Ugyldig JSON.");}
 }
-async function authorized(request,env) {
-  if(!env.APP_PASSWORD || String(env.APP_PASSWORD).length<12) return false;
-  const provided=request.headers.get("x-admin-key")||"";
-  const enc=new TextEncoder();
-  const a=enc.encode(provided), b=enc.encode(env.APP_PASSWORD);
-  // Compare digests to avoid short-circuit equality on plaintext.
-  const [ha,hb]=await Promise.all([crypto.subtle.digest("SHA-256",a),crypto.subtle.digest("SHA-256",b)]);
-  return crypto.subtle.timingSafeEqual(new Uint8Array(ha),new Uint8Array(hb));
+// Admin login is persisted using a signed, HttpOnly cookie. Never retain the
+// Cloudflare APP_PASSWORD in localStorage or sessionStorage.
+const SESSION_AGE=60*60*24*30;
+const sessionEncoder=new TextEncoder();
+const hex=bytes=>Array.from(bytes).map(b=>b.toString(16).padStart(2,"0")).join("");
+const fromHex=s=>new Uint8Array(s.match(/../g)?.map(x=>parseInt(x,16))||[]);
+async function sessionKey(env){
+ return crypto.subtle.importKey("raw",sessionEncoder.encode(env.APP_PASSWORD),
+   {name:"HMAC",hash:"SHA-256"},false,["sign","verify"]);
 }
+function cookieFromRequest(request){
+ const value=request.headers.get("cookie")||"";
+ const m=value.match(/(?:^|;\s*)psf_session=([^;]+)/);
+ return m?m[1]:null;
+}
+async function validSession(request,env){
+ if(!env.APP_PASSWORD||String(env.APP_PASSWORD).length<12)return false;
+ const cookie=cookieFromRequest(request);
+ if(!cookie)return false;
+ const m=/^(v1)\.(\d{10})\.([a-f0-9]{32})\.([a-f0-9]{64})$/.exec(cookie);
+ if(!m)return false;
+ const expires=Number(m[2]),now=Math.floor(Date.now()/1000);
+ if(expires<=now||expires>now+SESSION_AGE)return false;
+ const payload=m[1]+"."+m[2]+"."+m[3];
+ try{return await crypto.subtle.verify("HMAC",await sessionKey(env),fromHex(m[4]),sessionEncoder.encode(payload));}
+ catch{return false;}
+}
+async function checkPassword(request,env){
+ if(!env.APP_PASSWORD||String(env.APP_PASSWORD).length<12)return false;
+ const provided=request.headers.get("x-admin-key")||"";
+ if(!provided)return false;
+ const enc=new TextEncoder();
+ const [ha,hb]=await Promise.all([
+   crypto.subtle.digest("SHA-256",enc.encode(provided)),
+   crypto.subtle.digest("SHA-256",enc.encode(env.APP_PASSWORD))
+ ]);
+ return crypto.subtle.timingSafeEqual(new Uint8Array(ha),new Uint8Array(hb));
+}
+async function authorized(request,env){
+ return (await validSession(request,env))||(await checkPassword(request,env));
+}
+async function issueSession(env){
+ const expiration=String(Math.floor(Date.now()/1000)+SESSION_AGE);
+ const random=hex(crypto.getRandomValues(new Uint8Array(16)));
+ const payload="v1."+expiration+"."+random;
+ const signature=hex(new Uint8Array(await crypto.subtle.sign("HMAC",await sessionKey(env),sessionEncoder.encode(payload))));
+ return "psf_session="+payload+"."+signature+"; HttpOnly; Secure; SameSite=Strict; Path=/api; Max-Age="+SESSION_AGE;
+}
+function sessionResponse(data,cookie){
+ return new Response(JSON.stringify(data),{headers:{...headers,"set-cookie":cookie}});
+}
+const CLEAR_SESSION="psf_session=; HttpOnly; Secure; SameSite=Strict; Path=/api; Max-Age=0";
 // The official podcast RSS contains meeting IDs in the item description.
 // We match BOTH date and meeting number, never date alone (multiple recordings per day).
 function podcastMeetingNo(p) {
@@ -256,11 +299,20 @@ async function endpoint(request,env,url) {
       return error("Kilden sendte ikke en gyldig PDF under 30 MB.",502);
     return new Response(bytes,{headers:{"content-type":"application/pdf","cache-control":"public, max-age=86400"}});
   }
-  if(method==="POST" && path==="/api/login")
-    return (await authorized(request,env))?json({ok:true}):error("Forkert adgangskode eller APP_PASSWORD er ikke opsat i Cloudflare.",401);
+  if(method==="GET" && path==="/api/session")
+    return json({authenticated:await validSession(request,env)});
+  if(method==="POST" && path==="/api/login"){
+    if(!(await checkPassword(request,env)))return error("Forkert adgangskode.",401);
+    return sessionResponse({ok:true},await issueSession(env));
+  }
+  if(method==="POST" && path==="/api/logout")
+    return sessionResponse({ok:true},CLEAR_SESSION);
   if(method!=="POST")return error("Ukendt endpoint.",404);
+  // Only permit same-origin state changes with the signed session.
+  const origin=request.headers.get("origin");
+  if(origin && origin!==url.origin)return error("Ugyldig oprindelse.",403);
   if(!(await authorized(request,env)))
-    return error("Skriveadgang kræver APP_PASSWORD (mindst 12 tegn) opsat som Cloudflare Worker-secret.",401);
+    return error("Log ind for at redigere favoritter eller importere data.",401);
   const data=await body(request);
   if(path==="/api/archive/sync"){
     const batch=await syncArchiveBatch(env);
