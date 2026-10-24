@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { isoDate, rssEntries, safeMeeting } from "../src/worker.js";
+import { isoDate, rssEntries, safeMeeting, findMeetingAudio } from "../src/worker.js";
+import index from "../src/audio-index.json" with { type: "json" };
 
 test("datoer i mødetitler normaliseres",()=>{
   assert.equal(isoDate("21. januar 2026"),"2026-01-21");
@@ -28,4 +29,14 @@ test("RSS bruger enclosures og mødedato – aldrig pubDate som mødedato",()=>{
   assert.equal(entries.length,1);
   assert.equal(entries[0].date,"2026-01-21");
   assert.equal(entries[0].mp3_url,"https://example.org/meeting.mp3?x=1&y=2");
+});
+
+test("official RSS snapshot links to the correct meeting, not just same day",()=>{
+  assert.ok(index.length>100,"Expected a populated official podcast index");
+  const example=index.find(x=>x.date==="2026-01-21" && x.meeting_no===41);
+  assert.ok(example,"Missing January 21 2026, meeting 41");
+  assert.match(example.mp3_url,/^https:\/\/cdnapi\.kaltura\.com\//);
+  assert.match(example.mp3_url,/1_jb8pshgl/);
+  assert.equal(findMeetingAudio(index,{date:"2026-01-21",meeting_no:41}).length,1);
+  assert.equal(findMeetingAudio(index,{date:"2026-01-21",meeting_no:42}).length,0);
 });
