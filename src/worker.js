@@ -288,4 +288,4 @@ export default {
 };
 
 // Export deterministic helpers for regression tests.
-export { isoDate, rssEntries, safeMeeting };
+export { isoDate, rssEntries, safeMeeting, findMeetingAudio };
