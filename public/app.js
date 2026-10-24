@@ -1,5 +1,5 @@
 const $=x=>document.getElementById(x);
-const state={rows:[],stats:null,q:"",speaker:"",favorites:false,playing:null,pending:null,loading:false};
+const state={rows:[],stats:null,q:"",speaker:"",favorites:false,playing:null,pending:null,loading:false,transcriptRequestId:0};
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const admin=()=>($("adminPassword").value||sessionStorage.getItem("psf.admin")||"");
 function notice(s,bad=false){const el=$("notification");el.textContent=s;el.className="notification"+(bad?" error":"");clearTimeout(notice.timer);notice.timer=setTimeout(()=>el.classList.add("hidden"),9000);}
@@ -61,6 +61,59 @@ async function search(){
  catch(e){state.rows=[];notice(e.message,true);}finally{state.loading=false;render();}
 }
 function setTab(fav){state.favorites=fav;$("allTab").classList.toggle("selected",!fav);$("favTab").classList.toggle("selected",fav);search();}
+
+// The original transcript is a reading aid, not word-aligned subtitles.
+function speechIndex(row){
+ if(Number.isInteger(row.idx))return row.idx;
+ const match=String(row.id||"").match(/:(\d+)$/);
+ return match?Number(match[1]):null;
+}
+function safeSpeaker(name){
+ const s=String(name||"");
+ return /^(Spm\.?\s*nr\.?|Til\s+(?:udenrigs|justits|stats|udlændinge|social|miljø|indenrigs|finans)|\d+[).])/i.test(s)
+   ?"Taler ikke sikkert identificeret":s;
+}
+function showTranscript(items,selectedIdx){
+ const list=$("transcriptList");
+ if(!items.length){
+   list.textContent="Der er endnu ingen tekst omkring dette citat.";
+   return;
+ }
+ list.innerHTML=items.map(item=>{
+   const selected=item.idx===selectedIdx;
+   return '<article class="transcript-line '+(selected?'selected':'')+'">'+
+     '<div class="transcript-line-top"><span class="transcript-clock">Kl. '+esc(item.clock)+'</span>'+
+     '<span class="transcript-speaker">'+esc(safeSpeaker(item.speaker))+'</span></div>'+
+     '<p class="transcript-paragraph">'+highlight(item.content,state.q)+'</p>'+
+     (selected?'<div class="transcript-note">DET VALGTE INDLÆG</div>':'')+
+     '</article>';
+ }).join("");
+ const selected=list.querySelector(".transcript-line.selected");
+ if(selected){
+   // Scroll only the reading pane, not the entire dialog or underlying page.
+   const top=selected.getBoundingClientRect().top-list.getBoundingClientRect().top;
+   list.scrollTop+=top-Math.min(100,list.clientHeight*.25);
+ }
+}
+async function loadTranscript(row){
+ const meetingId=String(row.meeting_id||"");
+ const idx=speechIndex(row);
+ const token=++state.transcriptRequestId;
+ const list=$("transcriptList");
+ list.textContent="Henter referatet omkring citatet…";
+ if(!/^\d{5}_M\d{1,3}$/.test(meetingId)||idx===null){
+   list.textContent="Citatet mangler et sikkert referat-ID.";
+   return;
+ }
+ try{
+   const params=new URLSearchParams({meeting_id:meetingId,index:String(idx)});
+   const data=await api("/api/meeting/context?"+params);
+   if(token!==state.transcriptRequestId||state.playing?.row.meeting_id!==meetingId)return;
+   showTranscript(data.items||[],idx);
+ }catch(e){
+   if(token===state.transcriptRequestId)list.textContent="Referatteksten kunne ikke hentes: "+e.message;
+ }
+}
 function openPlayer(row,p){
  const audio=$("sampleAudio");
  audio.pause();
@@ -75,12 +128,14 @@ function openPlayer(row,p){
  $("playerContext").textContent="Møde "+row.meeting_no+" · "+dateLabel(row.date)+" · kl. "+row.clock+" i referatet";
  $("playerStart").value=anchor(p.mp3_url)||row.first_clock||row.clock;
  $("playerMp3Link").href=p.mp3_url;
+ $("transcriptPdf").href=row.source_url+"#page="+Number(row.page||1);
  $("playerStatus").textContent="";
  $("playerDialog").querySelector(".player-advanced").open=false;
  const position=calcOffset();
  $("playerDialog").showModal();
  audio.src=p.mp3_url;
  audio.load();
+ loadTranscript(row);
  if(position!==null&&position>=0) {
    state.pending=position;
    // Place the playhead immediately if supported. Reapply after metadata loads.
@@ -242,7 +297,7 @@ async function importPdf(bytes){
 function bind(){
  $("openImport").onclick=()=>{if(!$("importDialog").open)$("importDialog").showModal();};$("emptyImport").onclick=$("openImport").onclick;
  $("closeImport").onclick=()=>$("importDialog").close();$("closePlayer").onclick=()=>$("playerDialog").close();
- $("playerDialog").onclose=()=>{$("sampleAudio").pause();state.playing=null;state.pending=null;};
+ $("playerDialog").onclose=()=>{$("sampleAudio").pause();state.playing=null;state.pending=null;state.transcriptRequestId++;};
  $("playerStart").oninput=()=>{
    calcOffset();
    if(state.playing)storeAnchor(state.playing.p.mp3_url,$("playerStart").value);
