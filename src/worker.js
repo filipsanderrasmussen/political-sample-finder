@@ -1,3 +1,4 @@
+import { archiveManifest, archiveStatus, syncArchiveBatch } from "./archive.js";
 import offlinePodcastIndex from "./audio-index.json" with { type: "json" };
 // Political Sample Finder — Cloudflare Worker + D1.
 // Source-backed: results only come from imported Folketingstidende PDFs.
@@ -201,6 +202,7 @@ async function endpoint(request,env,url) {
       audio_archive_meetings:new Set(offlinePodcastIndex.map(x=>x.date+":"+x.meeting_no)).size,
       protected:!!env.APP_PASSWORD});
   }
+  if(method==="GET" && path==="/api/archive/status")return json(await archiveStatus(env));
   if(method==="GET" && path==="/api/search")return json({results:await findSpeeches(env,url.searchParams)});
   if(method==="GET" && path==="/api/pdf"){
     const m=safeMeeting(url.searchParams.get("samling"),url.searchParams.get("number"));
@@ -217,6 +219,10 @@ async function endpoint(request,env,url) {
   if(!(await authorized(request,env)))
     return error("Skriveadgang kræver APP_PASSWORD (mindst 12 tegn) opsat som Cloudflare Worker-secret.",401);
   const data=await body(request);
+  if(path==="/api/archive/sync"){
+    const batch=await syncArchiveBatch(env);
+    return json(batch);
+  }
   if(path==="/api/import/start"){
     const m=safeMeeting(data.samling,data.number);
     if(data.date && !isoDate(data.date))throw new Error("Ugyldig mødedato.");
@@ -286,8 +292,16 @@ export default {
     if(!url.pathname.startsWith("/api/"))return env.ASSETS.fetch(request);
     try{return await endpoint(request,env,url);}
     catch(err){console.error("API error:",err);return error(err?.message||"Uventet fejl.",400);}
+  },
+  async scheduled(event,env,ctx){
+    ctx.waitUntil((async()=>{
+      await init(env);
+      // Multiple bounded chunks per invocation. No public write endpoint.
+      for(let i=0;i<4;i++){
+        const r=await syncArchiveBatch(env);
+        if(r.done)break;
+      }
+    })().catch(err=>console.error("Scheduled transcript import:",err)));
   }
 };
-
-// Export deterministic helpers for regression tests.
 export { isoDate, rssEntries, safeMeeting, findMeetingAudio };
