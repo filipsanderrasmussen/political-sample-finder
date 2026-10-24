@@ -42,10 +42,10 @@ function mockEnv(){
     }
   };
   function apply(q){
-    if(q.sql.startsWith("INSERT INTO meetings"))meetings.set(q.args[0],{status:"syncing",speech_count:0});
+    if(q.sql.startsWith("INSERT INTO meetings"))meetings.set(q.args[0],{status:"syncing",speech_count:0,date:q.args[3],source_url:q.args[5]});
     else if(q.sql.startsWith("DELETE FROM speeches")){for(const [id,r] of speeches){if(r.meeting_id===q.args[0])speeches.delete(id);}}
     else if(q.sql.startsWith("INSERT OR REPLACE INTO speeches"))speeches.set(q.args[0],{meeting_id:q.args[1],idx:q.args[2],speaker:q.args[3],content:q.args[5]});
-    else if(q.sql.startsWith("UPDATE meetings SET status='ready'"))meetings.set(q.args[1],{status:"ready",speech_count:q.args[0]});
+    else if(q.sql.startsWith("UPDATE meetings SET status='ready'"))meetings.set(q.args[1],{...meetings.get(q.args[1]),status:"ready",speech_count:q.args[0]});
   }
   return {env,meetings,speeches};
 }
