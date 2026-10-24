@@ -7,6 +7,6 @@
   "d1_databases": [
     { "binding": "DB", "database_name": "political-samples" }
   ],
-  "triggers": { "crons": ["* * * * *"] },
+  "triggers": { "crons": ["7,37 * * * *"] },
   "observability": { "enabled": true }
 }
