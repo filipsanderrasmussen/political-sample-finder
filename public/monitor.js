@@ -94,7 +94,7 @@ export function initMonitor({onReady,onShutdown}){
     content.inert=next!=="on";
     content.setAttribute("aria-hidden",String(next!=="on"));
     power.setAttribute("aria-pressed",String(next==="on"));
-    power.setAttribute("aria-label",next==="on"?"Sluk skærmen":next==="booting"?"Afbr yd opstart":"Tænd skærmen");
+    power.setAttribute("aria-label",next==="on"?"Sluk skærmen":next==="booting"?"Opstart i gang":"Tænd skærmen");
     power.disabled=next==="booting";
     label.textContent=next==="on"?"SLUK":next==="booting"?"STARTER":"TÆND";
     offline.hidden=next!=="off";
