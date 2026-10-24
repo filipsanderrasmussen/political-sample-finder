@@ -41,3 +41,12 @@ for feed in ["Salen", "Alle"]:
         if items:
             print("OLDEST", {"title":(items[-1].findtext('title') or '')[:200],"pubDate":items[-1].findtext('pubDate')})
     except Exception as e: print("FAIL",feed,type(e).__name__,str(e)[:300])
+
+# Check public, read-only application stats (never send credentials).
+try:
+    import json
+    app='https://political-sample-finder.filip-8d4.workers.dev/api/stats'
+    with urllib.request.urlopen(app,timeout=20) as response:
+        print('APP_STATS',json.loads(response.read().decode('utf-8')))
+except Exception as e:
+    print('APP_STATS_ERROR',type(e).__name__,str(e)[:300])
