@@ -26,7 +26,8 @@ test("actual live stats are bound to three terminal readouts",()=>{
     assert.match(js,new RegExp('\\$\\("'+id+'"\\)\\.textContent'));
   }
   assert.match(css,/--accent:#4aff8f/);
-  assert.match(css,/\.blinking-cursor/);
+  assert.doesNotMatch(css,/@keyframes cursor-blink|\.blinking-cursor|\.hero-cursor/);
+  assert.match(css,/caret-color:var\(--accent\)/);
   assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
 });
 
@@ -43,9 +44,11 @@ test("audio playback, transcript reading and archive admin tools survive redesig
 test("interface uses Danish terminal language without changing working search or playback",()=>{
   assert.match(html,/SYSTEM KLAR/);
   assert.match(html,/AFVENTER SØGNING/);
-  assert.match(js,/INGEN FUND_/);
+  assert.doesNotMatch(html,/class="blinking-cursor"|class="hero-cursor"/);
+  assert.match(js,/INGEN FUND/);
   assert.match(js,/REFERATFUND/);
-  assert.doesNotMatch(js,/NO MATCH_|AWAITING INPUT_|TRANSCRIPT MATCH/);
+  assert.doesNotMatch(js,/NO MATCH_|AWAITING INPUT_|TRANSCRIPT MATCH|AFVENTER SØGNING_|INGEN FUND_/);
+  assert.match(js,/\$\("query"\)\.focus\(\{preventScroll:true\}\)/);
   assert.match(js,/\$\("searchForm"\)\.onsubmit/);
   assert.match(js,/skipAudio\(-15\)/);
   assert.match(js,/skipAudio\(15\)/);
