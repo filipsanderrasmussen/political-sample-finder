@@ -1,16 +1,32 @@
 const $=x=>document.getElementById(x);
-const state={rows:[],stats:null,q:"",speaker:"",favorites:false,playing:null,pending:null,loading:false,transcriptRequestId:0,searchRequestId:0};
+const state={rows:[],stats:null,q:"",speaker:"",favorites:false,playing:null,pending:null,loading:false,transcriptRequestId:0,searchRequestId:0,adminSession:false};
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const admin=()=>($("adminPassword").value||sessionStorage.getItem("psf.admin")||"");
+// The server keeps a 30-day signed HttpOnly session; no password storage.
 function notice(s,bad=false){const el=$("notification");el.textContent=s;el.className="notification"+(bad?" error":"");clearTimeout(notice.timer);notice.timer=setTimeout(()=>el.classList.add("hidden"),9000);}
 async function api(path,options={}){
  const r=await fetch(path,options),data=await r.json();
  if(!r.ok)throw new Error(data.error||"HTTP "+r.status);return data;
 }
-const post=(path,data)=>api(path,{method:"POST",headers:{"content-type":"application/json","x-admin-key":admin()},body:JSON.stringify(data)});
+const post=(path,data)=>api(path,{method:"POST",headers:{"content-type":"application/json"},credentials:"same-origin",body:JSON.stringify(data)});
+function showAdminState(){
+ $("adminLoginArea").classList.toggle("hidden",!!state.adminSession);
+ $("adminLoggedIn").classList.toggle("hidden",!state.adminSession);
+}
 async function authorize(){
- if(!admin()){if(!$("importDialog").open)$("importDialog").showModal();throw new Error("Angiv din APP_PASSWORD under Indlæs data.");}
- await post("/api/login",{});sessionStorage.setItem("psf.admin",admin());
+ if(state.adminSession)return true;
+ const session=await api("/api/session");
+ if(session.authenticated){state.adminSession=true;showAdminState();return true;}
+ const password=$("adminPassword").value;
+ if(!password){
+   if(!$("importDialog").open)$("importDialog").showModal();
+   $("adminPassword").focus();
+   throw new Error("Log ind én gang i Arkivstatus for at gemme favoritter og importere data.");
+ }
+ await api("/api/login",{method:"POST",headers:{"x-admin-key":password},credentials:"same-origin"});
+ $("adminPassword").value="";
+ state.adminSession=true;showAdminState();
+ $("adminLoginStatus").textContent="✓ Login gemt i 30 dage.";
+ return true;
 }
 function queryTokens(q){
  return String(q||"").toLocaleLowerCase("da-DK").match(/[\p{L}\p{M}\p{N}_]+/gu)||[];
@@ -37,7 +53,7 @@ function anchor(url){try{return localStorage.getItem("psf.anchor:"+url);}catch{r
 function storeAnchor(url,val){try{localStorage.setItem("psf.anchor:"+url,val);}catch{}}
 function seconds(row,p){const a=mins(row.clock),b=mins(anchor(p.mp3_url)||row.first_clock||row.clock);return a===null||b===null?null:(a-b)*60;}
 function render(){
- $("stats").textContent=(state.stats?.meetings||0)+" søgbare møder · "+(state.stats?.speeches||0)+" taler · "+(state.stats?.audio_archive_meetings||0)+" møder med MP3";
+ $("stats").textContent=(state.stats?.meetings||0)+" / "+(state.stats?.audio_archive_meetings||0)+" møder søgbare · "+(state.stats?.speeches||0).toLocaleString("da-DK")+" taleafsnit";
  $("count").textContent=state.rows.length+" MATCHES"+(state.rows.length===120?" (maks.)":"");
  const empty=$("empty");empty.classList.toggle("hidden",state.loading||state.rows.length>0);
  empty.querySelector("h2").textContent=(state.stats?.speeches||0)?"Ingen taler matcher søgningen.":"Først skal der lidt tale på pladen.";
@@ -365,12 +381,23 @@ function bind(){
   try{await authorize();const r=await post("/api/rss",{feed:$("feed").value});out.textContent="✓ "+r.fetched+" episoder; "+r.dated+" med dato.";await stats();await search();notice("Lydindeks opdateret.");}
   catch(e){out.textContent="Fejl: "+e.message;notice(e.message,true);}finally{btn.disabled=false;}
  };
- $("adminPassword").value=sessionStorage.getItem("psf.admin")||"";
+ sessionStorage.removeItem("psf.admin"); // Remove old tab-only password storage.
+ api("/api/session").then(r=>{state.adminSession=!!r.authenticated;showAdminState();}).catch(()=>showAdminState());
+ $("adminLoginBtn").onclick=async()=>{
+   try{await authorize();}catch(e){$("adminLoginStatus").textContent=e.message;}
+ };
+ $("adminPassword").onkeydown=e=>{
+   if(e.key==="Enter"){e.preventDefault();$("adminLoginBtn").click();}
+ };
+ $("adminLogoutBtn").onclick=async()=>{
+   await post("/api/logout",{});
+   state.adminSession=false;showAdminState();$("adminLoginStatus").textContent="Logget ud.";
+ };
  api("/api/archive/status").then(r=>{
    $("archiveState").textContent=r.archive_meetings
-     ?(r.indexed_meetings+" / "+r.archive_meetings+" MP3-møder søgbare · "+r.indexed_speeches+" taleafsnit")
-     :"Arkivet klargøres på GitHub.";
- }).catch(()=>{});
+     ?(r.indexed_meetings+" af "+(state.stats?.audio_archive_meetings||r.archive_meetings)+" lydmøder har søgbar tekst · "+r.indexed_speeches.toLocaleString("da-DK")+" taleafsnit. Opdateres automatisk.")
+     :"Referatarkivet klargøres automatisk fra Folketingstidende.";
+ }).catch(()=>{$("archiveState").textContent="Arkivstatus er midlertidigt utilgængelig.";});
 
 }
 bind();stats().catch(e=>notice("API er ikke klar: "+e.message,true));
