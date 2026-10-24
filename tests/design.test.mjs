@@ -57,3 +57,19 @@ test("interface uses Danish terminal language without changing working search or
   assert.match(js,/skipAudio\(-15\)/);
   assert.match(js,/skipAudio\(15\)/);
 });
+
+test("all interface greens derive from exactly one phosphor color",()=>{
+  assert.match(css,/--accent:#4aff8f/);
+  assert.match(html,/<meta name="theme-color" content="#050505"/);
+  const hexes=[...new Set(css.match(/#[0-9a-fA-F]{3,8}\\b/g)||[])];
+  const nonNeutral=hexes.filter(hex=>{
+    const digits=hex.slice(1);
+    if(digits.length===3)return !(digits[0]===digits[1]&&digits[1]===digits[2]);
+    const rgb=digits.slice(0,6);
+    return !(rgb.slice(0,2)===rgb.slice(2,4)&&rgb.slice(2,4)===rgb.slice(4,6));
+  });
+  assert.deepEqual(nonNeutral,["#4aff8f"]);
+  assert.match(css,/--muted:color-mix\\(in srgb,var\\(--accent\\)/);
+  assert.match(css,/\\.button\\.primary\\{[^}]*color:var\\(--bg\\)/);
+  assert.match(css,/\\.quote mark,\\.transcript-line mark\\{[^}]*color:var\\(--bg\\)/);
+});
