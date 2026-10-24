@@ -145,7 +145,7 @@ async function findSpeeches(env,params) {
   if(speaker){clauses.push("lower(s.speaker) LIKE ? ESCAPE '!'");
     binds.push("%"+escapeLike(speaker.toLowerCase())+"%");}
   if(fav) clauses.push("f.speech_id IS NOT NULL");
-  const sql="SELECT s.id,s.meeting_id,s.speaker,s.clock,s.content,s.page,m.date,m.title,m.meeting_no,m.samling,m.source_url,"+
+  const sql="SELECT s.id,s.idx,s.meeting_id,s.speaker,s.clock,s.content,s.page,m.date,m.title,m.meeting_no,m.samling,m.source_url,"+
     "CASE WHEN f.speech_id IS NULL THEN 0 ELSE 1 END favorite,"+
     "(SELECT MIN(clock) FROM speeches x WHERE x.meeting_id=s.meeting_id) first_clock "+
     "FROM speeches s JOIN meetings m ON m.id=s.meeting_id LEFT JOIN favorites f ON f.speech_id=s.id "+
@@ -185,6 +185,25 @@ async function findSpeeches(env,params) {
   }
   return rows;
 }
+// Nearby source transcript paragraphs, in their actual document order.
+// A timestamp belongs to the beginning of a speech, NOT to every sentence.
+function contextParams(meetingId,at) {
+  if(!/^\d{5}_M\d{1,3}$/.test(String(meetingId||"")))throw new Error("Ugyldigt møde-id");
+  const index=Number(at);
+  if(!Number.isInteger(index)||index<0||index>30000)throw new Error("Ugyldigt indeks for tale");
+  return {meetingId,index,start:Math.max(0,index-7),end:index+7};
+}
+async function getTranscriptContext(env,meetingId,at){
+  const x=contextParams(meetingId,at);
+  const exists=await env.DB.prepare("SELECT id,status FROM meetings WHERE id=?").bind(x.meetingId).first();
+  if(!exists||exists.status!=="ready")throw new Error("Dette mødes referat er endnu ikke færdigindekseret");
+  const rows=await env.DB.prepare(
+    "SELECT id,idx,clock,speaker,content,page FROM speeches "+
+    "WHERE meeting_id=? AND idx BETWEEN ? AND ? ORDER BY idx ASC LIMIT 15"
+  ).bind(x.meetingId,x.start,x.end).all();
+  return {meeting_id:x.meetingId,center:x.index,items:rows.results||[],
+    note:"Klokkeslæt er afrundet og angiver taleafsnittets start, ikke præcise tidspunkter for ordene."};
+}
 async function endpoint(request,env,url) {
   await init(env);
   const path=url.pathname,method=request.method;
@@ -206,6 +225,7 @@ async function endpoint(request,env,url) {
   }
   if(method==="GET" && path==="/api/archive/status")return json(await archiveStatus(env));
   if(method==="GET" && path==="/api/search")return json({results:await findSpeeches(env,url.searchParams)});
+  if(method==="GET" && path==="/api/meeting/context")return json(await getTranscriptContext(env,url.searchParams.get("meeting_id"),url.searchParams.get("index")));
   if(method==="GET" && path==="/api/pdf"){
     const m=safeMeeting(url.searchParams.get("samling"),url.searchParams.get("number"));
     const upstream=await fetch(m.url,{headers:{"Accept":"application/pdf"}});
@@ -306,4 +326,4 @@ export default {
     })().catch(err=>console.error("Scheduled transcript import:",err)));
   }
 };
-export { isoDate, rssEntries, safeMeeting, findMeetingAudio };
+export { isoDate, rssEntries, safeMeeting, findMeetingAudio, contextParams };
