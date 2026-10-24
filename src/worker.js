@@ -1,4 +1,4 @@
-import offlinePodcastIndex from "./audio-index.json";
+import offlinePodcastIndex from "./audio-index.json" with { type: "json" };
 // Political Sample Finder — Cloudflare Worker + D1.
 // Source-backed: results only come from imported Folketingstidende PDFs.
 // Podcast links are explicitly approximate date matches, not verified audio alignments.
