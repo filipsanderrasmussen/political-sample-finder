@@ -15,6 +15,7 @@ jobs:
           python-version: "3.12"
       - run: python -m pip install "PyMuPDF>=1.24,<2"
       - run: python scripts/build_transcript_archive.py --meeting 20251_M41
+      - run: python scripts/build_transcript_archive.py --meeting 20252_M3
       - name: Show verified extraction and example
         run: |
           python - <<'PY'
