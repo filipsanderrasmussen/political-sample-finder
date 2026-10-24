@@ -62,28 +62,110 @@ async function search(){
 }
 function setTab(fav){state.favorites=fav;$("allTab").classList.toggle("selected",!fav);$("favTab").classList.toggle("selected",fav);search();}
 function openPlayer(row,p){
- const audio=$("sampleAudio");audio.pause();audio.removeAttribute("src");audio.load();
- state.playing={row,p};state.pending=null;
- $("playerSpeaker").textContent=row.speaker;
- $("playerContext").textContent="Møde "+row.meeting_no+" · "+dateLabel(row.date)+" · start kl. "+row.clock+" · "+p.title+" (kun datomatch)";
+ const audio=$("sampleAudio");
+ audio.pause();
+ audio.removeAttribute("src");
+ audio.load();
+ state.playing={row,p};
+ state.pending=null;
+ const speaker=String(row.speaker||"");
+ const suspect=/^(Spm\.?\s*nr\.?|Til\s+(?:udenrigs|justits|stats|udlændinge|social|miljø|indenrigs|finans)|\d+[).])/i.test(speaker);
+ $("playerQuote").textContent="“"+excerpt(row.content,state.q)+"”";
+ $("playerSpeaker").textContent=suspect?"Taler ikke sikkert identificeret":speaker;
+ $("playerContext").textContent="Møde "+row.meeting_no+" · "+dateLabel(row.date)+" · kl. "+row.clock+" i referatet";
  $("playerStart").value=anchor(p.mp3_url)||row.first_clock||row.clock;
  $("playerMp3Link").href=p.mp3_url;
- $("playerStatus").textContent="Hele mødeoptagelsen. Tidspositionen er kun et overslag.";
- $("playerAnchorHelp").textContent="Ret MP3'ens startklokkeslæt ved behov; browseren husker din indstilling.";
- calcOffset();$("playerDialog").showModal();audio.src=p.mp3_url;audio.load();
+ $("playerStatus").textContent="";
+ $("playerDialog").querySelector(".player-advanced").open=false;
+ const position=calcOffset();
+ $("playerDialog").showModal();
+ audio.src=p.mp3_url;
+ audio.load();
+ if(position!==null&&position>=0) {
+   state.pending=position;
+   // Place the playhead immediately if supported. Reapply after metadata loads.
+   try{audio.currentTime=position;}catch{}
+   // This runs in the user's click gesture. Some browsers may still block
+   // playback; in that case the large play button remains available.
+   const playing=audio.play();
+   if(playing&&typeof playing.catch==="function")playing.catch(()=>{
+     if(state.playing?.p.mp3_url===p.mp3_url)
+       $("playerStatus").textContent="Tryk på Afspil, hvis browseren ikke starter automatisk.";
+   });
+ }else{
+   $("playerStatus").textContent="Kontrollér optagelsens startklokkeslæt under Justér.";
+ }
 }
 function calcOffset(){
- if(!state.playing)return null;const a=mins(state.playing.row.clock),b=mins($("playerStart").value);const diff=a===null||b===null?null:(a-b)*60;
- $("playerOffset").textContent=diff!==null&&diff<0?"Før MP3-start":offset(diff);return diff;
+ if(!state.playing)return null;
+ const a=mins(state.playing.row.clock),b=mins($("playerStart").value);
+ const diff=a===null||b===null?null:(a-b)*60;
+ $("playerOffset").textContent=diff!==null&&diff<0?"Før lydstart":offset(diff);
+ return diff;
 }
 async function seek(){
- if(!state.playing)return;const n=calcOffset();if(n===null||n<0){$("playerStatus").textContent="Kontrollér startklokkeslættet.";return;}
+ if(!state.playing)return;
+ const n=calcOffset();
+ if(n===null||n<0){
+   $("playerStatus").textContent="Justér optagelsens startklokkeslæt.";
+   $("playerDialog").querySelector(".player-advanced").open=true;
+   return;
+ }
+ const audio=$("sampleAudio");
+ if(Number.isFinite(audio.duration)&&n>=audio.duration){
+   $("playerStatus").textContent="Tidspunktet ligger efter MP3'ens slutning. Justér startklokkeslættet.";
+   $("playerDialog").querySelector(".player-advanced").open=true;
+   state.pending=null;return;
+ }
  storeAnchor(state.playing.p.mp3_url,$("playerStart").value);
- const audio=$("sampleAudio");state.pending=n;
- if(audio.readyState<1){$("playerStatus").textContent="Indlæser MP3-metadata…";return;}
- if(Number.isFinite(audio.duration)&&n>=audio.duration){$("playerStatus").textContent="Hop-position efter MP3'ens slutning. Tjek dato og starttid.";state.pending=null;return;}
- try{audio.currentTime=n;state.pending=null;$("playerStatus").textContent="Søger omkring "+offset(n)+" – finjustér på tidslinjen.";await audio.play();}
- catch{$("playerStatus").textContent="MP3-serveren understøtter muligvis ikke hop her. Åbn originalen nedenfor.";}
+ if(audio.readyState<1){
+   state.pending=n;
+   $("playerStatus").textContent="Indlæser lydfilen…";
+ }else{
+   state.pending=null;
+   try{audio.currentTime=n;}catch{
+     $("playerStatus").textContent="Kunne ikke springe i lydfilen. Brug tidslinjen i afspilleren.";
+     return;
+   }
+   $("playerStatus").textContent="Afspiller omkring "+offset(n)+".";
+ }
+ try{await audio.play();}
+ catch{
+   $("playerStatus").textContent="Tryk på Play i lydafspilleren, eller åbn MP3-filen direkte.";
+ }
+}
+function finishInitialSeek(){
+ const audio=$("sampleAudio");
+ if(state.pending===null||!state.playing)return;
+ const n=state.pending;
+ state.pending=null;
+ if(Number.isFinite(audio.duration)&&n>=audio.duration){
+   audio.pause();
+   $("playerStatus").textContent="Tidspunktet ligger uden for optagelsen. Justér startklokkeslættet.";
+   $("playerDialog").querySelector(".player-advanced").open=true;
+   return;
+ }
+ try{
+   audio.currentTime=n;
+   $("playerStatus").textContent="Startet omkring "+offset(n)+" · brug ±15 sek. til at finjustere.";
+ }catch{
+   $("playerStatus").textContent="Hop er ikke understøttet af MP3-serveren. Prøv tidslinjen.";
+ }
+}
+function skipAudio(delta){
+ if(!state.playing)return;
+ const audio=$("sampleAudio");
+ if(audio.readyState<1){
+   $("playerStatus").textContent="Lydfilen indlæses stadig.";
+   return;
+ }
+ const now=Number.isFinite(audio.currentTime)?audio.currentTime:0;
+ const last=Number.isFinite(audio.duration)?Math.max(0,audio.duration-.1):Infinity;
+ try{
+   audio.currentTime=Math.max(0,Math.min(last,now+delta));
+   $("playerStatus").textContent="Position "+offset(audio.currentTime)+".";
+   if(audio.paused)audio.play().catch(()=>{});
+ }catch{$("playerStatus").textContent="Kunne ikke springe i denne optagelse.";}
 }
 function meeting(){const samling=$("samling").value.trim(),number=Number($("meeting").value);if(!/^20\d{3}$/.test(samling)||!Number.isInteger(number)||number<1||number>200)throw new Error("Ugyldig samling eller mødenummer.");return {samling,number};}
 function parseDate(text){
@@ -161,8 +243,14 @@ function bind(){
  $("openImport").onclick=()=>{if(!$("importDialog").open)$("importDialog").showModal();};$("emptyImport").onclick=$("openImport").onclick;
  $("closeImport").onclick=()=>$("importDialog").close();$("closePlayer").onclick=()=>$("playerDialog").close();
  $("playerDialog").onclose=()=>{$("sampleAudio").pause();state.playing=null;state.pending=null;};
- $("playerStart").oninput=calcOffset;$("playerSeek").onclick=seek;
- $("sampleAudio").onloadedmetadata=()=>{if(state.pending!==null)seek();};
+ $("playerStart").oninput=()=>{
+   calcOffset();
+   if(state.playing)storeAnchor(state.playing.p.mp3_url,$("playerStart").value);
+ };
+ $("playerSeek").onclick=seek;
+ $("playerBack").onclick=()=>skipAudio(-15);
+ $("playerForward").onclick=()=>skipAudio(15);
+ $("sampleAudio").onloadedmetadata=finishInitialSeek;
  $("sampleAudio").onerror=()=>{if(state.playing)$("playerStatus").textContent="Kunne ikke afspille MP3 her. Åbn originalen i stedet.";};
  $("searchBtn").onclick=search;
  for(const id of ["query","speaker"])$(id).onkeydown=e=>{if(e.key==="Enter")search();};
