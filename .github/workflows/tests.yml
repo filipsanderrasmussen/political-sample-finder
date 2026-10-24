@@ -16,6 +16,8 @@ jobs:
           node --check public/app.js
       - name: Parser regression tests
         run: node --test tests/*.test.mjs
+      - name: SQLite FTS5 integration tests
+        run: python3 tests/fts_sqlite.py
       - name: Check Cloudflare Worker bundle
         run: |
           npm install --ignore-scripts --no-audit --no-fund
