@@ -1,3 +1,4 @@
+import offlinePodcastIndex from "./audio-index.json";
 // Political Sample Finder — Cloudflare Worker + D1.
 // Source-backed: results only come from imported Folketingstidende PDFs.
 // Podcast links are explicitly approximate date matches, not verified audio alignments.
@@ -161,7 +162,11 @@ async function findSpeeches(env,params) {
     row.podcasts=findMeetingAudio(dbByDate.get(row.date),row);
     row.favorite=!!row.favorite;
     row.audio_source=row.podcasts.length?"indexed":"unmatched";
-    if(!row.podcasts.length && row.date)missing.push(row);
+    if(!row.podcasts.length && row.date){
+      row.podcasts=findMeetingAudio(offlinePodcastIndex,row);
+      if(row.podcasts.length)row.audio_source="official_rss_snapshot";
+      else missing.push(row);
+    }
   }
   // Self-healing: matches appear even if the user has never clicked "Update audio index".
   // The feed is fetched only when some result is missing a matching podcast.
