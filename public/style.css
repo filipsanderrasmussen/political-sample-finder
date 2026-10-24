@@ -66,16 +66,12 @@ a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
 .hero h1 span{display:block}
 .hero h1 span:last-child{white-space:nowrap}
 .hero h1 .hero-number{font-size:1.25em;letter-spacing:.16em;color:#b4ffc7;text-indent:.16em;text-shadow:0 0 8px #8cffaf99,0 0 35px #3aff7850}
-.hero h1 .hero-cursor{display:inline;font-size:.8em;color:var(--accent);letter-spacing:0;vertical-align:.06em;animation:cursor-blink 1.05s steps(1,end) infinite;text-shadow:0 0 16px #4aff8faa}
-@media (prefers-reduced-motion:reduce){.hero h1 .hero-cursor{animation:none}}
 .hero-subline{margin:21px 0 8px;color:#216840;letter-spacing:.15em;font-size:11px;overflow:hidden;white-space:nowrap}
 .hero-subline span{color:var(--accent)}
 .eyebrow,.searchpanel label,.field label{font-size:11px;font-weight:700;letter-spacing:.13em;color:var(--accent)}
 .searchpanel{padding:17px 0 28px;border:0;background:transparent}
 .search-header{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:0 0 9px}
 .search-ready{color:var(--muted);font-size:11px;letter-spacing:.13em}
-.blinking-cursor{animation:cursor-blink 1.05s steps(1,end) infinite;color:var(--accent)}
-@keyframes cursor-blink{0%,48%{opacity:1}49%,100%{opacity:0}}
 .searchbar{
   display:flex;align-items:center;gap:14px;padding:7px 7px 7px 20px;
   min-height:100px;margin:0 0 23px;border:2px solid var(--accent);
@@ -331,5 +327,4 @@ footer{
 }
 @media(prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
-  .blinking-cursor{opacity:1}
 }
