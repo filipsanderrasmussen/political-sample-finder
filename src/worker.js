@@ -197,6 +197,8 @@ async function endpoint(request,env,url) {
     ]);
     return json({meetings:meetings.results[0].n,speeches:speeches.results[0].n,
       podcasts:podcasts.results[0].n,dated_podcasts:dated.results[0].n,recent_meetings:items.results,
+      audio_archive_links:offlinePodcastIndex.length,
+      audio_archive_meetings:new Set(offlinePodcastIndex.map(x=>x.date+":"+x.meeting_no)).size,
       protected:!!env.APP_PASSWORD});
   }
   if(method==="GET" && path==="/api/search")return json({results:await findSpeeches(env,url.searchParams)});
