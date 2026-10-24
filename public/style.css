@@ -265,22 +265,25 @@ footer{
 .transcript-foot{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:10px;margin-top:10px}
 .transcript-foot span{color:var(--muted)}
 
-/* 1987 terminal monitor: thin neutral-metal bezel, phosphor-green CRT.
-   The chassis fills the viewport; only the screen scrolls. */
+/* 1987 terminal monitor: a substantial graphite chassis.
+   Full viewport: screen contents scroll inside the glass, not behind the bezel. */
 html,body{height:100%;overflow:hidden}
 body{background:#171717}
 body::after{display:none}
 .monitor-shell{
-  display:grid;grid-template-rows:minmax(0,1fr) 43px;gap:0;
+  --bezel-side:clamp(15px,1.8vw,30px);
+  --bezel-top:clamp(14px,1.5vw,24px);
+  --panel-height:74px;
+  display:grid;grid-template-rows:minmax(0,1fr) var(--panel-height);gap:0;
   width:100%;height:100vh;height:100dvh;min-height:300px;
-  padding:8px 9px 0;overflow:hidden;
+  padding:var(--bezel-top) var(--bezel-side) 0;overflow:hidden;
   background:linear-gradient(140deg,#444 0%,#2c2c2c 15%,#343434 78%,#181818 100%);
   box-shadow:inset 0 2px 0 #777,inset 0 0 0 2px #191919;
 }
 .monitor-screen{
   position:relative;min-height:0;overflow:auto;overscroll-behavior:contain;
-  border:2px solid #111;border-radius:32px / 25px;background:var(--bg);
-  box-shadow:0 0 0 3px #242424,inset 0 0 55px #000,inset 0 0 0 3px #0d0d0d;
+  border:3px solid #111;border-radius:31px / 25px;background:var(--bg);
+  box-shadow:0 0 0 4px #242424,inset 0 0 55px #000,inset 0 0 0 3px #0d0d0d;
   scrollbar-width:thin;
   scrollbar-color:color-mix(in srgb,var(--accent) 38%,transparent) #070707;
 }
@@ -298,7 +301,8 @@ body::after{display:none}
 .monitor-shell{position:relative}
 .monitor-shell::after{
   content:"";position:absolute;pointer-events:none;z-index:20;
-  left:12px;right:12px;top:11px;bottom:46px;
+  left:calc(var(--bezel-side) + 3px);right:calc(var(--bezel-side) + 3px);
+  top:calc(var(--bezel-top) + 3px);bottom:calc(var(--panel-height) + 3px);
   border-radius:30px / 24px;
   background:repeating-linear-gradient(0deg,transparent 0 3px,#000 4px 5px);
   opacity:.12;
@@ -310,7 +314,11 @@ body::after{display:none}
 }
 .monitor-shell[data-power="off"] .terminal-frame,
 .monitor-shell[data-power="booting"] .terminal-frame{display:none}
-.monitor-shell[data-power="on"] .monitor-boot{display:none}
+.monitor-shell[data-power="on"] .monitor-boot,
+.monitor-shell[data-power="off"] .monitor-boot{display:none}
+/* Power off means no phosphor: no scanlines, words or luminous glass. */
+.monitor-shell[data-power="off"] .monitor-screen{background:#010101;box-shadow:0 0 0 4px #242424,inset 0 0 70px #000}
+.monitor-shell[data-power="off"]::after{display:none}
 .monitor-shell[data-power="on"] .terminal-frame{
   animation:crt-energize .5s ease-out both;
 }
@@ -324,9 +332,6 @@ body::after{display:none}
   min-height:100%;padding:32px;color:var(--accent);
   font-size:clamp(12px,1.5vw,17px);letter-spacing:.07em;
 }
-.monitor-offline{text-align:center;color:color-mix(in srgb,var(--accent) 75%,transparent)}
-.monitor-offline-title{font-size:clamp(20px,3vw,34px);letter-spacing:.15em}
-.monitor-offline p{margin:16px 0 0;font-size:12px;letter-spacing:.03em;color:var(--muted)}
 .monitor-boot-lines{
   display:block;max-width:min(680px,100%);width:100%;min-height:190px;
   text-align:left;color:var(--accent);text-shadow:0 0 12px color-mix(in srgb,var(--accent) 27%,transparent);
@@ -335,14 +340,14 @@ body::after{display:none}
 .monitor-boot-row{padding:4px 0;white-space:normal;overflow-wrap:anywhere}
 .monitor-controls{
   display:flex;align-items:center;justify-content:space-between;gap:16px;
-  padding:3px 11px 5px 18px;color:#c7c7c7;font-family:ui-monospace,Consolas,monospace;
+  padding:8px 15px 10px 25px;color:#c7c7c7;font-family:ui-monospace,Consolas,monospace;
   text-shadow:0 1px 0 #050505;
 }
 .monitor-model{font-size:10px;letter-spacing:.22em;font-weight:750;color:#c2c2c2}
 .monitor-model span{color:#8e8e8e}
 .monitor-control-group{display:flex;align-items:center;gap:10px}
 .monitor-power-led{
-  display:block;width:6px;height:6px;border-radius:50%;background:#0a0a0a;
+  display:block;width:8px;height:8px;border-radius:50%;background:#0a0a0a;
   border:1px solid #777;box-shadow:inset 0 1px 2px #000;
 }
 .monitor-shell[data-power="on"] .monitor-power-led,
@@ -353,11 +358,11 @@ body::after{display:none}
 .monitor-power-caption{font-size:9px;letter-spacing:.09em;color:#b2b2b2}
 .monitor-power-button{
   display:flex;align-items:center;justify-content:center;gap:8px;
-  min-width:94px;min-height:31px;padding:3px 13px;
+  min-width:122px;min-height:42px;padding:5px 18px;
   border:1px solid #777;border-top-color:#959595;border-bottom-color:#171717;
   border-radius:5px;color:#f0f0f0;background:linear-gradient(#474747,#222);
   box-shadow:inset 0 1px 0 #666,0 1px 2px #111;
-  font-size:11px;font-weight:800;letter-spacing:.08em;
+  font-size:12px;font-weight:800;letter-spacing:.09em;
 }
 .monitor-power-button:hover:not(:disabled){background:linear-gradient(#575757,#303030)}
 .monitor-power-button:active:not(:disabled){box-shadow:inset 0 2px 4px #090909}
@@ -368,12 +373,12 @@ body::after{display:none}
   .monitor-shell .terminal-frame{width:100%;margin:0}
 }
 @media(max-width:580px){
-  .monitor-shell{grid-template-rows:minmax(0,1fr) 39px;padding:5px 5px 0}
-  .monitor-screen{border-radius:19px / 14px}
-  .monitor-shell::after{left:7px;right:7px;top:7px;bottom:42px;border-radius:18px / 13px}
-  .monitor-controls{padding:2px 4px 3px 8px}
+  .monitor-shell{--bezel-side:11px;--bezel-top:10px;--panel-height:57px}
+  .monitor-screen{border-radius:20px / 16px}
+  .monitor-shell::after{border-radius:19px / 15px}
+  .monitor-controls{padding:4px 7px 5px 9px}
   .monitor-model{font-size:8px;letter-spacing:.08em}
-  .monitor-power-button{min-height:31px;min-width:82px;padding:2px 8px}
+  .monitor-power-button{min-height:38px;min-width:96px;padding:3px 11px}
   .monitor-control-group{gap:6px}
   .monitor-power-caption{display:none}
   .monitor-boot{padding:18px;font-size:12px}
