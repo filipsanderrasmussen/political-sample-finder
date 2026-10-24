@@ -35,5 +35,8 @@ jobs:
             echo "Nothing new to archive"
           else
             git commit -m "Archive official transcripts for MP3-linked meetings"
-            git push
+            # The source crawl takes time. Other app commits may land meanwhile.
+            # Rebase the generated archive on the latest branch before pushing.
+            git pull --rebase origin main
+            git push origin HEAD:main
           fi
