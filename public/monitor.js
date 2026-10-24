@@ -1,15 +1,12 @@
-import { BOOT_DURATION_MS, playPowerSound } from "./boot-audio.js";
-export { BOOT_DURATION_MS, playPowerSound } from "./boot-audio.js";
-
 // The terminal's front-panel power switch and deliberately theatrical start-up.
 // No network requests are needed to boot. The real search UI is initialized once
 // the monitor is on; only a successful boot is remembered per browser session.
 export const BOOT_STEPS = Object.freeze([
-  {at:180, text:"DATATERMINAL TD-2000"},
-  {at:980, text:"INITIALISERER BILLEDRØR"},
-  {at:2350,text:"KONTROL AF ARBEJDSLAGER ... OK"},
-  {at:4140,text:"INDLÆSER TERMINALPROGRAM"},
-  {at:5700,text:"SYSTEM KLAR"}
+  {at:120, text:"DATATERMINAL TD-2000"},
+  {at:570, text:"INITIALISERER BILLEDRØR"},
+  {at:1190,text:"KONTROL AF ARBEJDSLAGER ... OK"},
+  {at:1860,text:"INDLÆSER TERMINALPROGRAM"},
+  {at:2390,text:"SYSTEM KLAR"}
 ]);
 
 const SESSION_KEY="td2000.monitor.booted";
@@ -36,7 +33,6 @@ export function initMonitor({onReady,onShutdown}){
     throw new Error("Skærmens betjeningspanel mangler.");
   const timers=new Set();
   let state="off";
-  let stopBootAudio=null;
   const schedule=(fn,ms)=>{
     const id=setTimeout(()=>{timers.delete(id);fn()},ms);
     timers.add(id);
@@ -66,7 +62,6 @@ export function initMonitor({onReady,onShutdown}){
   };
   const powerOff=()=>{
     clearTimers();
-    stopBootAudio?.();stopBootAudio=null;
     storageRemove(SESSION_KEY);
     setState("off");
     lines.replaceChildren();
@@ -77,7 +72,6 @@ export function initMonitor({onReady,onShutdown}){
     setState("booting");
     lines.replaceChildren();
     const reduceMotion=window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
-    if(!reduceMotion)stopBootAudio=playPowerSound();
     if(reduceMotion){
       lines.textContent="SYSTEM KLAR";
       schedule(ready,350);
@@ -91,7 +85,7 @@ export function initMonitor({onReady,onShutdown}){
         lines.append(row);
       },step.at);
     }
-    schedule(ready,BOOT_DURATION_MS);
+    schedule(ready,2900);
   };
   power.addEventListener("click",()=>state==="on"?powerOff():powerOn());
   // Only one theatrical boot per tab session. The physical switch can
