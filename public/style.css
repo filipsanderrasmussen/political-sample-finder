@@ -436,3 +436,87 @@ body::after{display:none}
 @media(prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
 }
+
+
+/* VT323 is derived from DEC VT320 character shapes (1987 era).
+   Unlike a typical modern monospace, the glyphs are raster-terminal inspired.
+   Keep it inside the CRT; the cabinet's engraved labels remain hardware type. */
+.terminal-frame,.monitor-boot,.dialog{
+  font-family:"VT323",ui-monospace,Consolas,"Liberation Mono",monospace;
+  font-weight:400;
+  font-synthesis:none;
+  letter-spacing:.015em;
+}
+.terminal-frame{font-size:21px;line-height:1.27}
+.terminal-frame button,.terminal-frame input,.dialog button,.dialog input,.dialog select{
+  font-family:inherit;font-weight:400;letter-spacing:.02em;
+}
+.topbar{font-size:19px}
+.system-version{font-size:16px}
+.hero{padding-top:38px}
+.hero-command{font-size:16px}
+.hero h1{
+  font-size:clamp(60px,8.4vw,123px);
+  font-weight:400;letter-spacing:.012em;line-height:.89;
+}
+.hero h1 .hero-number{font-size:1.15em;letter-spacing:.12em;text-indent:.12em}
+.eyebrow,.searchpanel label,.field label{font-size:17px}
+.searchbar input{font-size:clamp(30px,3.5vw,45px);letter-spacing:0}
+.searchbar .button{font-size:29px}
+.searchbar .button span{font-size:29px}
+.stat-label{font-size:17px}
+.stat-value{font-size:clamp(36px,4.5vw,59px);font-weight:400}
+.speakerfilter{font-size:20px}
+.tabs button{font-size:20px}
+#count{font-size:17px}
+.result-terminal-top{font-size:16px}
+.speaker-name{font-size:27px}
+.date,.micro{font-size:18px}
+.quote{font-size:25px;line-height:1.3}
+.time-pill{font-size:18px}
+.link-btn{font-size:18px}
+.fav-btn{font-size:27px}
+.empty h2{font-size:26px}
+.empty p{font-size:20px}
+footer{font-size:15px}
+.dialog{font-size:21px}
+.dialog h2{font-size:37px}
+.dialog .intro,.field-help,.legal{font-size:19px}
+.field small{font-size:17px}
+.feedback,.archive-overview,.auth-signed-in,.advanced-import summary{font-size:19px}
+.field input,.uploadrow select{font-size:20px}
+.player-quote{font-size:29px;font-weight:400}
+.player-meta{font-size:19px}
+.player-position span,.player-status,.player-advanced summary,.player-adjust label,.player-footer{font-size:18px}
+.player-position strong{font-size:35px;font-weight:400}
+.player-play,.skip-button{font-size:19px}
+.transcript-heading h3{font-size:27px}
+.transcript-heading .eyebrow,.transcript-chip{font-size:17px}
+.transcript-explanation,.transcript-paragraph{font-size:19px}
+.transcript-clock,.transcript-speaker{font-size:18px}
+.transcript-note,.transcript-foot{font-size:16px}
+@media(max-width:790px){
+  .hero h1{font-size:clamp(53px,9.5vw,78px)}
+  .hero-command{font-size:14px}
+  .topbar{font-size:17px}
+  .quote{font-size:22px}
+  .player-quote{font-size:25px}
+}
+@media(max-width:580px){
+  .hero{padding-top:29px}
+  .hero h1{font-size:clamp(41px,8.4vw,60px)}
+  .searchbar input{font-size:29px}
+  .searchbar .button{font-size:24px}
+  .stat-label{font-size:13px}
+  .stat-value{font-size:clamp(27px,6vw,39px)}
+  .topbar{font-size:16px}
+  .tabs button{font-size:18px}
+  .quote{font-size:21px}
+  .speaker-name{font-size:24px}
+  .link-btn,.time-pill{font-size:16px}
+  .micro,.date{font-size:16px}
+  .dialog{font-size:18px}
+  .player-quote{font-size:24px}
+  .player-play,.skip-button{font-size:16px}
+  .transcript-paragraph{font-size:18px}
+}
