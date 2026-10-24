@@ -29,3 +29,5 @@ export async function ensureSearchIndex(env){
    "ON CONFLICT(key) DO UPDATE SET value='1'").run();
  return {ready:true,built:true};
 }
+
+export { VIRTUAL_SQL, TRIGGERS };
