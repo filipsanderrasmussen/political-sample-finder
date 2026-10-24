@@ -14,7 +14,8 @@ const SCHEMA = [
   "CREATE INDEX IF NOT EXISTS speech_meeting_idx ON speeches(meeting_id)",
   "CREATE TABLE IF NOT EXISTS podcasts (mp3_url TEXT PRIMARY KEY, title TEXT NOT NULL, date TEXT, episode_url TEXT, description TEXT, feed TEXT)",
   "CREATE INDEX IF NOT EXISTS podcast_date_idx ON podcasts(date)",
-  "CREATE TABLE IF NOT EXISTS favorites (speech_id TEXT PRIMARY KEY, added_at TEXT NOT NULL)"
+  "CREATE TABLE IF NOT EXISTS favorites (speech_id TEXT PRIMARY KEY, added_at TEXT NOT NULL)",
+  "CREATE TABLE IF NOT EXISTS archived_favorites (id TEXT PRIMARY KEY, meeting_id TEXT NOT NULL, source_date TEXT, speaker TEXT, clock TEXT, content TEXT, archived_at TEXT NOT NULL)"
 ].join(";\n") + ";";
 async function init(env) {
   if (!env.DB) throw new Error("D1-databasen DB mangler. Kontrollér Cloudflare-bindingen.");
