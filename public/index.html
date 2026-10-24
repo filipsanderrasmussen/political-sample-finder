@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="da"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#111a18">
+<title>Political Sample Finder</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><span class="brand-icon">◉</span><span>POLITICAL<br><b>SAMPLE FINDER</b></span></div>
+  <div class="top-right"><span id="stats">Henter statistik…</span><button id="openImport" class="button outline">+ Indlæs data</button></div>
+</header>
+<main class="shell">
+  <section class="hero">
+    <div class="eyebrow">FOLKETINGET · STEMMER · SAMPLING</div>
+    <h1>Find ordene.<br><em>Hør stemmen.</em></h1>
+    <p>Søg i Folketingets referater, find omtrent hvor ordene blev sagt, og åbn den originale lydoptagelse.</p>
+  </section>
+  <section class="searchpanel">
+    <label for="query">SØG I TALERNE</label>
+    <div class="searchbar"><span aria-hidden="true">⌕</span><input id="query" placeholder="Eksempel: fuldstændig vanvittigt" autocomplete="off"><button id="searchBtn" class="button primary">Søg →</button></div>
+    <div class="search-options">
+      <label class="speakerfilter">POLITIKER <input id="speaker" placeholder="Filtrér efter navn"></label>
+      <div class="quicksearch"><span>PRØV:</span><button data-query="ansvar">ansvar</button><button data-query="stoppe">stoppe</button><button data-query="igen">igen</button></div>
+    </div>
+  </section>
+  <section class="results-head">
+    <div class="tabs" role="tablist"><button id="allTab" class="selected" role="tab" aria-selected="true">Alle fund</button><button id="favTab" role="tab" aria-selected="false">★ Favoritter</button></div>
+    <span id="count">0 MATCHES</span>
+  </section>
+  <div id="notification" role="status" class="notification hidden"></div>
+  <div id="results"></div>
+  <div id="empty" class="empty"><span class="empty-symbol">♫</span><h2>Først skal der lidt tale på pladen.</h2><p>Indlæs et referat, så bliver originale politiske udtalelser søgbare.</p><button class="button primary" id="emptyImport">Indlæs første møde →</button></div>
+  <footer>Referatklokkeslæt angiver starten af et talerindlæg, ikke sekundet for søgeordet. Podcastlinks er foreløbige datomatch, ikke verificeret synkronisering.</footer>
+</main>
+<dialog id="importDialog" class="dialog"><div class="dialog-content">
+ <div class="dialog-head"><div><div class="eyebrow">DATAKILDER</div><h2>Indlæs Folketinget</h2></div><button class="close" id="closeImport" aria-label="Luk">×</button></div>
+ <p class="intro">PDF'en analyseres i din browser; kun udtrukne referattekster gemmes i Cloudflare D1.</p>
+ <div class="field"><label for="adminPassword">ADGANGSKODE TIL IMPORT OG FAVORITTER</label><input type="password" id="adminPassword" placeholder="APP_PASSWORD fra Cloudflare" autocomplete="off"><small>Opbevares kun i denne browserfane. Sættes som Worker-secret i Cloudflare.</small></div>
+ <hr>
+ <div class="eyebrow">01 / REFERAT</div>
+ <div class="twofields"><div class="field"><label for="samling">SAMLING</label><input id="samling" value="20251" inputmode="numeric"></div><div class="field"><label for="meeting">MØDENUMMER</label><input id="meeting" value="41" type="number" min="1" max="200"></div></div>
+ <button id="importBtn" class="button primary full">Hent og indeksér referat →</button>
+ <p class="field-help">Kan Folketingstidende ikke nås? Download referatet og indlæs PDF-filen her.</p>
+ <div class="uploadrow"><input type="file" id="pdfFile" accept="application/pdf,.pdf"><button id="uploadBtn" class="button outline">Indlæs valgt PDF</button></div>
+ <p id="importState" class="feedback" aria-live="polite"></p>
+ <hr>
+ <div class="eyebrow">02 / LYDARKIV</div>
+ <p class="field-help">Hent podcastlinks fra Folketingets officielle RSS-feed. Vi lagrer kun links, ikke MP3-filer.</p>
+ <div class="uploadrow"><select id="feed"><option value="Salen">Folketingssalen</option><option value="Alle">Alle møder</option></select><button id="rssBtn" class="button outline">Opdatér lydindeks</button></div>
+ <p id="rssState" class="feedback" aria-live="polite"></p>
+ <hr><p class="legal">Folketingets lyd og tv er beskyttet af brugsbetingelser. Læs betingelserne før bearbejdning eller offentliggørelse af samples.</p>
+</div></dialog>
+<dialog id="playerDialog" class="dialog"><div class="dialog-content">
+ <div class="dialog-head"><div><div class="eyebrow">ORIGINAL OPTAGELSE · FORELØBIGT DATO-MATCH</div><h2 id="playerSpeaker">Taler</h2></div><button id="closePlayer" class="close" aria-label="Luk">×</button></div>
+ <p class="intro" id="playerContext"></p>
+ <audio id="sampleAudio" controls preload="metadata" style="width:100%"></audio>
+ <div class="field"><label for="playerStart">MP3'ENS STARTKLOKKESLÆT (JUSTERBART)</label><input id="playerStart" type="time"></div>
+ <div class="offsetline"><span>Anslået position i MP3</span><b id="playerOffset">–</b></div>
+ <button id="playerSeek" class="button primary full">Afspil fra cirka-position</button>
+ <p id="playerStatus" class="feedback"></p><p id="playerAnchorHelp" class="field-help"></p>
+ <a id="playerMp3Link" href="#" target="_blank" rel="noopener noreferrer" class="filelink">Åbn hele den originale MP3 ↗</a>
+</div></dialog>
+<script type="module" src="/app.js"></script>
+</body></html>
