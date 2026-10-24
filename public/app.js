@@ -25,7 +25,7 @@ function anchor(url){try{return localStorage.getItem("psf.anchor:"+url);}catch{r
 function storeAnchor(url,val){try{localStorage.setItem("psf.anchor:"+url,val);}catch{}}
 function seconds(row,p){const a=mins(row.clock),b=mins(anchor(p.mp3_url)||row.first_clock||row.clock);return a===null||b===null?null:(a-b)*60;}
 function render(){
- $("stats").textContent=(state.stats?.meetings||0)+" møder · "+(state.stats?.speeches||0)+" taler";
+ $("stats").textContent=(state.stats?.meetings||0)+" møder · "+(state.stats?.speeches||0)+" taler · "+(state.stats?.podcasts||0)+" lydlinks";
  $("count").textContent=state.rows.length+" MATCHES"+(state.rows.length===120?" (maks.)":"");
  const empty=$("empty");empty.classList.toggle("hidden",state.loading||state.rows.length>0);
  empty.querySelector("h2").textContent=(state.stats?.speeches||0)?"Ingen taler matcher søgningen.":"Først skal der lidt tale på pladen.";
@@ -33,13 +33,16 @@ function render(){
  $("emptyImport").classList.toggle("hidden",!!state.stats?.speeches);
  $("results").innerHTML=state.rows.map(r=>{
   const podcasts=r.podcasts||[],p=podcasts[0];
+  const video="https://mobiltv.ft.dk/video/"+encodeURIComponent(r.samling)+"/salen/"+Number(r.meeting_no);
+  const speaker=/^(Spm\.?\s*nr\.?|\d+\)|Til\s+(?:udenrigs|justits|stats|udlændinge|social|miljø|indenrigs|finans))/i.test(r.speaker)?"Taler ikke sikkert identificeret":r.speaker;
   const listen=podcasts.slice(0,3).map((a,i)=>'<button class="link-btn" data-listen="'+esc(r.id)+'" data-ix="'+i+'">♫ Lyt fra ca. '+esc(offset(seconds(r,a)))+(podcasts.length>1?" · kandidat "+(i+1):"")+'</button>').join("");
-  return '<article class="result"><div class="result-meta"><b class="speaker-name">'+esc(r.speaker)+'</b><span class="date">'+dateLabel(r.date)+' · Møde '+r.meeting_no+'</span></div>'+
+  return '<article class="result"><div class="result-meta"><b class="speaker-name">'+esc(speaker)+'</b><span class="date">'+dateLabel(r.date)+' · Møde '+r.meeting_no+'</span></div>'+
   '<p class="quote">“'+highlight(excerpt(r.content,state.q),state.q)+'”</p><div class="result-footer"><span class="time-pill">◷ Kl. '+esc(r.clock)+'</span>'+
-  '<span class="micro">'+(p?"Muligt MP3-datomatch; ikke verificeret":"Intet MP3-datomatch")+'</span>'+
+  '<span class="micro">'+(p?"Mulig MP3 (samme dato)":"Ingen MP3 i det indlæste lydindeks")+'</span>'+
+  '<a class="link-btn" href="'+esc(video)+'" target="_blank" rel="noopener noreferrer">▶ Video fra mødet ↗</a>'+
   '<a class="link-btn muted-link" href="'+esc(r.source_url)+'#page='+Number(r.page||1)+'" target="_blank" rel="noopener noreferrer">Referat ↗</a>'+
   listen+(p?.episode_url?'<a class="link-btn muted-link" href="'+esc(p.episode_url)+'" target="_blank" rel="noopener noreferrer">Episode ↗</a>':"")+
-  (!p?'<a class="link-btn muted-link" href="https://www.ft.dk/da/aktuelt/tv-fra-folketinget" target="_blank" rel="noopener noreferrer">TV-arkiv ↗</a>':"")+
+
   '<button class="fav-btn '+(r.favorite?"active":"")+'" data-fav="'+esc(r.id)+'">'+(r.favorite?"★":"☆")+'</button></div></article>';
  }).join("");
  document.querySelectorAll("[data-listen]").forEach(b=>b.onclick=()=>{const r=state.rows.find(x=>x.id===b.dataset.listen);const p=r?.podcasts?.[Number(b.dataset.ix)];if(r&&p)openPlayer(r,p);});
@@ -118,7 +121,7 @@ function extract(lines,page){
   if(stop<0)continue;
   const speaker=parts.slice(0,stop+1).join(" ").replace(/:$/,"").trim();
   const content=parts.slice(stop+1).join(" ").replace(/\s+/g," ").replace(/\s+-\s+/g,"-").trim();
-  if(speaker&&speaker.length<=160&&content.length>=6)result.push({speaker,clock:mark[1],content,page});
+  if(speaker&&speaker.length<=160&&content.length>=6&&!/^(Spm\.?\s*nr\.?|\d+\)|Til\s+(?:udenrigs|justits|stats|udlændinge|social|miljø|indenrigs|finans))/i.test(speaker))result.push({speaker,clock:mark[1],content,page});
  }
  return result;
 }
