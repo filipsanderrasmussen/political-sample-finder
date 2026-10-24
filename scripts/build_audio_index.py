@@ -54,6 +54,24 @@ for item in root.findall(".//item"):
         "mp3_url": url,
         "feed": "Salen",
     })
+# Retain every previously discovered official link when the RSS feed rolls forward.
+# Only metadata captured from the official podcast feed belongs in this archive.
+if TARGET.exists():
+    previous = json.loads(TARGET.read_text(encoding="utf-8"))
+    if not isinstance(previous, list):
+        raise RuntimeError("Existing RSS archive has an unexpected format")
+    existing_urls = {item["mp3_url"] for item in result}
+    for old in previous:
+        if (
+            isinstance(old, dict)
+            and isinstance(old.get("mp3_url"), str)
+            and old["mp3_url"].startswith(("https://cdnapi.kaltura.com/", "https://mobiltv.ft.dk/"))
+            and isinstance(old.get("date"), str)
+            and isinstance(old.get("meeting_no"), int)
+            and old["mp3_url"] not in existing_urls
+        ):
+            result.append(old)
+            existing_urls.add(old["mp3_url"])
 result.sort(key=lambda r: (r["date"], r["meeting_no"], r["title"], r["mp3_url"]), reverse=True)
 if len(result) < 20:
     raise RuntimeError(f"Unreasonably short official feed: {len(result)} records; refusing to overwrite existing index")
