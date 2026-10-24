@@ -91,7 +91,8 @@ function showTranscript(items,selectedIdx){
  const selected=list.querySelector(".transcript-line.selected");
  if(selected){
    // Scroll only the reading pane, not the entire dialog or underlying page.
-   const top=selected.getBoundingClientRect().top-list.getBoundingClientRect().top;
+   const target=selected.querySelector("mark")||selected;
+   const top=target.getBoundingClientRect().top-list.getBoundingClientRect().top;
    list.scrollTop+=top-Math.min(100,list.clientHeight*.25);
  }
 }
