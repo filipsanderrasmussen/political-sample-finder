@@ -60,8 +60,6 @@ function render(){
  $("statSpeeches").textContent=speech.toLocaleString("da-DK");
  $("statAudio").textContent=audio.toLocaleString("da-DK");
  $("stats").textContent=meet+" søgbare møder, "+speech.toLocaleString("da-DK")+" taleafsnit, "+audio+" møder med lyd";
- document.querySelectorAll(".quick-pads button[data-query]").forEach(btn=>
-   btn.classList.toggle("is-active",btn.dataset.query.toLowerCase()===state.q.trim().toLowerCase()));
  $("count").textContent=state.loading?"SØGER":((state.q.trim()||state.speaker.trim()||state.favorites)?String(state.rows.length).padStart(2,"0")+" FUNDET"+(state.rows.length===120?" / MAKS.":""):"KLAR TIL SØGNING");
  const empty=$("empty");empty.classList.toggle("hidden",state.loading||state.rows.length>0);
  const searching=!!(state.q.trim()||state.speaker.trim()||state.favorites);
@@ -363,7 +361,6 @@ function bind(){
  $("searchForm").onsubmit=e=>{e.preventDefault();search();};
  let timer;$("speaker").oninput=()=>{clearTimeout(timer);timer=setTimeout(search,350);};
  $("allTab").onclick=()=>setTab(false);$("favTab").onclick=()=>setTab(true);
- document.querySelectorAll("[data-query]").forEach(b=>b.onclick=()=>{$("query").value=b.dataset.query;search();});
  $("importBtn").onclick=async()=>{
   const out=$("importState");out.textContent="Henter PDF fra Folketingstidende…";
   try{const r=await fetch("/api/pdf?"+new URLSearchParams(meeting()));if(!r.ok){const x=await r.json();throw new Error(x.error||"PDF kunne ikke hentes.");}
