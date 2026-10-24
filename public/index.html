@@ -6,7 +6,16 @@
 <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-<div class="terminal-frame">
+<div class="monitor-shell" id="monitorShell" data-power="off" aria-label="Taledatabase 2000 terminalmonitor">
+  <div class="monitor-screen" id="monitorScreen">
+    <section class="monitor-boot" id="monitorBoot" aria-live="polite" aria-atomic="true" aria-label="Skærmens opstart">
+      <div class="monitor-offline" id="monitorOffline">
+        <div class="monitor-offline-title">SKÆRM SLUKKET</div>
+        <p>Tryk på tændknappen under skærmen.</p>
+      </div>
+      <div class="monitor-boot-lines" id="monitorBootLines" hidden></div>
+    </section>
+    <div class="terminal-frame" id="terminalFrame" inert aria-hidden="true">
   <header class="topbar">
     <div class="brand"><span class="brand-led" aria-hidden="true"></span><span>TD<span class="brand-slash">–</span>2000 <span class="brand-slash">//</span> TALEARKIV</span></div>
     <div class="top-right"><span class="system-version">SYSTEM / UDGAVE 2000</span><button id="openImport" type="button" class="button outline">[ ARKIVSTATUS ]</button></div>
@@ -34,9 +43,22 @@
     </section>
     <div id="notification" role="status" class="notification hidden"></div>
     <div id="results" aria-live="polite"></div>
-    <div id="empty" class="empty"><span class="empty-symbol" aria-hidden="true">&gt;</span><h2>AFVENTER SØGNING</h2><p>Skriv et ord, eller vælg en hurtigsøgning ovenfor.</p><button class="button outline" type="button" id="emptyImport">[ ARKIVSTATUS ]</button></div>
+    <div id="empty" class="empty"><span class="empty-symbol" aria-hidden="true">&gt;</span><h2>AFVENTER SØGNING</h2><p>Indtast en søgestreng ovenfor.</p><button class="button outline" type="button" id="emptyImport">[ ARKIVSTATUS ]</button></div>
     <footer><span>TALEDATABASE 2000 // UOFFICIELT SØGEVÆRKTØJ</span><span>KILDER: FOLKETINGET</span><span>VEJLEDENDE TIDSPOSITIONER</span></footer>
   </main>
+    </div>
+  </div>
+  <div class="monitor-controls">
+    <div class="monitor-model" aria-hidden="true">DATATERMINAL <span>TD–2000</span></div>
+    <div class="monitor-control-group">
+      <span class="monitor-power-led" aria-hidden="true"></span>
+      <span class="monitor-power-caption" aria-hidden="true">STRØM</span>
+      <button type="button" id="monitorPower" class="monitor-power-button" aria-label="Tænd skærmen" aria-pressed="false">
+        <span class="monitor-power-icon" aria-hidden="true">⏻</span>
+        <span id="monitorPowerLabel">TÆND</span>
+      </button>
+    </div>
+  </div>
 </div>
 <dialog id="importDialog" class="dialog"><div class="dialog-content">
  <div class="dialog-head"><div><div class="eyebrow">TALEDATABASE 2000 // DRIFT</div><h2>Arkivstatus</h2></div><button class="close" id="closeImport" aria-label="Luk">×</button></div>
