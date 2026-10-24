@@ -29,6 +29,9 @@ SUSPECT = re.compile(r"^(?:Spm\.?\s*nr|Svar på|Til\s+(?:udenrigs|stats|justits|
 
 def session(date):
     d=dt.date.fromisoformat(date)
+    # The second 2025-26 sitting has its own official samling identifier.
+    if dt.date(2026,4,10) <= d < dt.date(2026,10,6):
+        return "20252"
     return str(d.year if d.month>=10 else d.year-1)+"1"
 
 def extract_page(blocktext,page):
@@ -55,9 +58,22 @@ def ordered_columns(page):
     right=sorted((b for b in blocks if b[0]>=split),key=lambda b:(b[1],b[0]))
     return "\n".join(b[4] for b in left+right)
 
-def parse_pdf(raw):
+def parse_pdf(raw, expected_date=None, expected_meeting_no=None):
     pdf=fitz.open(stream=raw,filetype="pdf")
     if not pdf.page_count:raise ValueError("Empty PDF")
+    first=pdf[0].get_text("text",sort=True)
+    if expected_date:
+        d=dt.date.fromisoformat(expected_date)
+        day=str(d.day)
+        expected=re.compile(r"\\b0?"+re.escape(day)+r"\\.\\s*"+MONTHS[d.month-1]+r"\\s+"+str(d.year)+r"\\b",re.I)
+        if not expected.search(first):
+            pdf.close()
+            raise ValueError("PDF date does not match podcast date")
+    if expected_meeting_no:
+        expected=re.compile(r"\\b"+str(expected_meeting_no)+r"\\.\\s*møde\\b",re.I)
+        if not expected.search(first):
+            pdf.close()
+            raise ValueError("PDF meeting number does not match podcast")
     records=[]
     for no,page in enumerate(pdf,1):
         col=extract_page(ordered_columns(page),no)
@@ -122,14 +138,15 @@ def main():
         target=OUTPUT/(m["id"]+".json")
         if target.exists() and not args.overwrite:
             present=json.loads(target.read_text(encoding="utf-8"))
-            row={**m,"speeches":len(present.get("speeches",[])),"status":"ready"}
-            existing[m["id"]]=row
-            continue
+            if present.get("date")==m["date"] and present.get("source_url")==m["source_url"] and present.get("speeches"):
+                row={**m,"speeches":len(present["speeches"]),"status":"ready"}
+                existing[m["id"]]=row
+                continue
         try:
             raw=download(m["source_url"])
-            extracted=parse_pdf(raw)
-            if len(extracted)<3:
-                raise ValueError(f"Only {len(extracted)} speeches parsed")
+            extracted=parse_pdf(raw,m["date"],m["meeting_no"])
+            if not extracted:
+                raise ValueError("No speeches parsed")
             row={**m,"speeches":len(extracted),"status":"ready"}
             target.write_text(json.dumps({**m,"speeches":extracted},ensure_ascii=False,separators=(",",":"))+"\n",encoding="utf-8")
             existing[m["id"]]=row
@@ -139,7 +156,7 @@ def main():
             failed+=1
             existing[m["id"]]={**m,"speeches":0,"status":"missing","error":str(exc)[:180]}
             print(f"[{position}/{len(meetings)}] FAIL {m['id']} {str(exc)[:150]}",flush=True)
-    manifest=sorted(existing.values(),key=lambda x:(x["date"],x["meeting_no"]),reverse=True)
+    manifest=sorted((existing[k] for k in unique if k in existing),key=lambda x:(x["date"],x["meeting_no"]),reverse=True)
     manifest_path.write_text(json.dumps(manifest,ensure_ascii=False,separators=(",",":"))+"\n",encoding="utf-8")
     total=sum(x.get("speeches",0) for x in manifest if x.get("status")=="ready")
     print(f"SUMMARY: examined={len(meetings)} downloaded={processed} failed={failed}, archived meetings={sum(x.get('status')=='ready' for x in manifest)}, archived speeches={total}",flush=True)
