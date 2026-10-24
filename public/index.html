@@ -16,14 +16,14 @@
     <h1>Find ordene.<br><em>Hør stemmen.</em></h1>
     <p>Søg i Folketingets referater, find omtrent hvor ordene blev sagt, og åbn den originale lydoptagelse.</p>
   </section>
-  <section class="searchpanel">
+  <form class="searchpanel" id="searchForm" role="search">
     <label for="query">SØG I TALERNE</label>
-    <div class="searchbar"><span aria-hidden="true">⌕</span><input id="query" placeholder="Eksempel: fuldstændig vanvittigt" autocomplete="off"><button id="searchBtn" class="button primary">Søg →</button></div>
+    <div class="searchbar"><span aria-hidden="true">⌕</span><input id="query" name="q" type="search" enterkeyhint="search" placeholder="Eksempel: fuldstændig vanvittigt" autocomplete="off"><button id="searchBtn" type="submit" class="button primary">Søg →</button></div>
     <div class="search-options">
       <label class="speakerfilter">POLITIKER <input id="speaker" placeholder="Filtrér efter navn"></label>
-      <div class="quicksearch"><span>PRØV:</span><button data-query="ansvar">ansvar</button><button data-query="stoppe">stoppe</button><button data-query="igen">igen</button></div>
+      <div class="quicksearch"><span>PRØV:</span><button type="button" data-query="ansvar">ansvar</button><button type="button" data-query="stoppe">stoppe</button><button type="button" data-query="igen">igen</button></div>
     </div>
-  </section>
+  </form>
   <section class="results-head">
     <div class="tabs" role="tablist"><button id="allTab" class="selected" role="tab" aria-selected="true">Alle fund</button><button id="favTab" role="tab" aria-selected="false">★ Favoritter</button></div>
     <span id="count">0 MATCHES</span>
