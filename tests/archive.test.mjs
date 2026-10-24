@@ -42,6 +42,7 @@ function mockEnv(){
     }
   };
   function apply(q){
+    console.log("DB TEST SQL",q.sql.slice(0,85),JSON.stringify(q.args.slice(0,3)));
     if(q.sql.startsWith("INSERT INTO meetings"))meetings.set(q.args[0],{status:"syncing",speech_count:0});
     else if(q.sql.startsWith("DELETE FROM speeches"))for(const [id,r] of speeches)if(r.meeting_id===q.args[0])speeches.delete(id);
     else if(q.sql.startsWith("INSERT OR REPLACE INTO speeches"))speeches.set(q.args[0],{meeting_id:q.args[1],idx:q.args[2],speaker:q.args[3],content:q.args[5]});
