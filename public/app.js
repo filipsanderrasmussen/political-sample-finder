@@ -25,7 +25,7 @@ function anchor(url){try{return localStorage.getItem("psf.anchor:"+url);}catch{r
 function storeAnchor(url,val){try{localStorage.setItem("psf.anchor:"+url,val);}catch{}}
 function seconds(row,p){const a=mins(row.clock),b=mins(anchor(p.mp3_url)||row.first_clock||row.clock);return a===null||b===null?null:(a-b)*60;}
 function render(){
- $("stats").textContent=(state.stats?.meetings||0)+" møder med søgbar tekst · "+(state.stats?.speeches||0)+" taler · "+(state.stats?.audio_archive_meetings||0)+" møder med MP3";
+ $("stats").textContent=(state.stats?.meetings||0)+" søgbare møder · "+(state.stats?.speeches||0)+" taler · "+(state.stats?.audio_archive_meetings||0)+" møder med MP3";
  $("count").textContent=state.rows.length+" MATCHES"+(state.rows.length===120?" (maks.)":"");
  const empty=$("empty");empty.classList.toggle("hidden",state.loading||state.rows.length>0);
  empty.querySelector("h2").textContent=(state.stats?.speeches||0)?"Ingen taler matcher søgningen.":"Først skal der lidt tale på pladen.";
@@ -179,11 +179,35 @@ function bind(){
   const out=$("importState");try{const file=$("pdfFile").files[0];if(!file)throw new Error("Vælg en PDF først.");await importPdf(await file.arrayBuffer());}
   catch(e){out.textContent="Fejl: "+e.message;notice(e.message,true);}
  };
+ $("syncArchiveBtn").onclick=async()=>{
+  const btn=$("syncArchiveBtn"),out=$("archiveState");
+  btn.disabled=true;
+  try{
+    await authorize();
+    let last="";
+    for(let i=0;i<2000;i++){
+      const r=await post("/api/archive/sync",{});
+      if(r.done){last="✓ Arkivet er færdigindekseret ("+(r.indexed_meetings||0)+" møder).";break;}
+      last=(r.meeting||"") + ": "+r.processed+" / "+r.total+" taler behandlet";
+      out.textContent=last;
+      if(i%8===0)await new Promise(resolve=>setTimeout(resolve,1));
+    }
+    out.textContent=last;
+    await stats();await search();
+  }catch(err){out.textContent="Import kunne ikke fortsætte: "+err.message;notice(err.message,true);}
+  finally{btn.disabled=false;}
+ };
  $("rssBtn").onclick=async()=>{
   const out=$("rssState"),btn=$("rssBtn");btn.disabled=true;out.textContent="Indlæser lydfeed…";
   try{await authorize();const r=await post("/api/rss",{feed:$("feed").value});out.textContent="✓ "+r.fetched+" episoder; "+r.dated+" med dato.";await stats();await search();notice("Lydindeks opdateret.");}
   catch(e){out.textContent="Fejl: "+e.message;notice(e.message,true);}finally{btn.disabled=false;}
  };
  $("adminPassword").value=sessionStorage.getItem("psf.admin")||"";
+ api("/api/archive/status").then(r=>{
+   $("archiveState").textContent=r.archive_meetings
+     ?(r.indexed_meetings+" / "+r.archive_meetings+" MP3-møder søgbare · "+r.indexed_speeches+" taleafsnit")
+     :"Arkivet klargøres på GitHub.";
+ }).catch(()=>{});
+
 }
 bind();stats().catch(e=>notice("API er ikke klar: "+e.message,true));
