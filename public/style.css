@@ -46,11 +46,11 @@
 }
 
 
-/* Transcript navigator: searchable document on the right, audio on the left. */
+/* Read-only referat: context for listening, not a second set of controls. */
 .player-dialog{width:min(980px,calc(100vw - 30px));max-height:92vh}
 .player-dialog .dialog-content{padding:22px 26px}
 .player-dialog .player-topline{margin-bottom:10px}
-.player-columns{display:grid;grid-template-columns:minmax(0,0.9fr) minmax(0,1.1fr);gap:26px;align-items:start}
+.player-columns{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:26px;align-items:start}
 .player-main{min-width:0}
 .player-main .player-quote{font-size:20px;line-height:1.38;-webkit-line-clamp:5;margin-top:5px}
 .player-main .player-meta{margin-bottom:18px}
@@ -60,28 +60,19 @@
 .transcript-heading .eyebrow{font-size:10px}
 .transcript-chip{font-size:10px;letter-spacing:.1em;color:var(--muted);border:1px solid var(--border);border-radius:6px;padding:4px 7px}
 .transcript-explanation{font-size:12px;line-height:1.5;color:var(--muted);margin:7px 0 14px}
-.transcript-navigation{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px}
-.transcript-navigation span{font-size:11px;color:var(--muted);text-align:center}
-.transcript-nav-button{font-size:11px;font-weight:700;border:1px solid var(--border);background:#23362e;color:var(--text);padding:8px 11px;border-radius:8px;white-space:nowrap}
-.transcript-nav-button:disabled{opacity:.35;cursor:default}
-.transcript-nav-button:not(:disabled):hover{background:#30513e}
-.transcript-list{overflow-y:auto;min-height:160px;max-height:510px;overscroll-behavior:contain;border:1px solid var(--border);border-radius:10px;background:#11211b;scrollbar-color:#426251 transparent}
-.transcript-line{width:100%;display:block;text-align:left;border:0;border-bottom:1px solid #294136;background:transparent;color:var(--text);padding:11px 13px;cursor:pointer}
-.transcript-line:last-child{border-bottom:none}
-.transcript-line:hover{background:#23392e}
-.transcript-line.selected{background:#293d30;box-shadow:inset 3px 0 0 var(--accent)}
-.transcript-line.active-clock .transcript-clock{color:var(--accent)}
-.transcript-line-top{display:flex;align-items:baseline;gap:7px;margin-bottom:3px;flex-wrap:wrap}
+.transcript-list{overflow-y:auto;min-height:160px;max-height:520px;overscroll-behavior:contain;border:1px solid var(--border);border-radius:10px;background:#11211b;scrollbar-color:#426251 transparent}
+.transcript-line{border-bottom:1px solid #294136;color:var(--text);padding:13px 15px}
+.transcript-line:last-child{border-bottom:0}
+.transcript-line.selected{background:#283e31;box-shadow:inset 3px 0 0 var(--accent)}
+.transcript-line-top{display:flex;gap:7px;align-items:baseline;flex-wrap:wrap;margin-bottom:5px}
 .transcript-clock{color:var(--gold);font-variant-numeric:tabular-nums;font-size:11px;font-weight:750}
-.transcript-speaker{font-size:12px;font-weight:750;color:#dae9dd}
-.transcript-paragraph{font-size:12px;line-height:1.6;color:#c6d2c9;margin:0;white-space:normal;overflow-wrap:anywhere}
-.transcript-line:not(.selected) .transcript-paragraph{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
-.transcript-line.selected .transcript-paragraph{max-height:220px;overflow-y:auto;color:#f0f4ee}
+.transcript-speaker{font-size:12px;font-weight:750;color:#dae9dd;overflow-wrap:anywhere}
+.transcript-paragraph{font-size:13px;line-height:1.65;color:#c6d2c9;margin:0;white-space:normal;overflow-wrap:anywhere}
+.transcript-line.selected .transcript-paragraph{color:#f0f4ee}
 .transcript-line mark{background:#b8d899;color:#0d1810;border-radius:2px;padding:0 1px}
-.transcript-line-hint{font-size:10px;color:var(--muted);margin-top:6px}
+.transcript-note{margin-top:7px;color:#b8d899;font-size:10px;font-weight:650}
 .transcript-foot{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:11px;margin-top:10px}
 .transcript-foot span{color:var(--muted)}
-.transcript-list:focus-visible,.transcript-line:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 @media(max-width:760px){
  .player-dialog{width:min(570px,calc(100vw - 20px));max-height:94vh}
  .player-dialog .dialog-content{padding:17px}
