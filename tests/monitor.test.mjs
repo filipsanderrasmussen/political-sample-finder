@@ -1,8 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
-import {BOOT_STEPS,BOOT_DURATION_MS,playPowerSound,initMonitor} from "../public/monitor.js";
-import {BOOT_SOUND_CUES} from "../public/boot-audio.js";
+import {BOOT_STEPS,initMonitor} from "../public/monitor.js";
 
 const html=readFileSync("public/index.html","utf8");
 const css=readFileSync("public/style.css","utf8");
@@ -103,16 +102,10 @@ test("power switch boots on user action, stores session, and turns off safely",(
     env.advanceTo(2400);
     assert.deepEqual(
       env.elements.get("monitorBootLines").children.map(x=>x.textContent),
-      BOOT_STEPS.filter(x=>x.at<=2400).map(x=>"> "+x.text)
-    );
-    assert.equal(ready,0);
-    env.advanceTo(BOOT_DURATION_MS-1);
-    assert.deepEqual(
-      env.elements.get("monitorBootLines").children.map(x=>x.textContent),
       BOOT_STEPS.map(x=>"> "+x.text)
     );
-    assert.equal(monitor.state,"booting");
-    env.advanceTo(BOOT_DURATION_MS);
+    assert.equal(ready,0);
+    env.advanceTo(2900);
     assert.equal(monitor.state,"on");
     assert.equal(ready,1);
     assert.equal(env.storage.get("td2000.monitor.booted"),"1");
@@ -161,51 +154,8 @@ test("late-eighties CRT font is loaded with Danish-language capable fallback",()
 });
 
 
-test("power-on audio schedules mechanical CRT, drive and POST phases in sync with boot",()=>{
-  const env=fakeEnvironment();
-  try{
-    const sources=[];
-    const params=[];
-    class AudioParam {
-      value=0;
-      events=[];
-      setValueAtTime(value,time){this.value=value;this.events.push({method:"set",value,time})}
-      linearRampToValueAtTime(value,time){this.events.push({method:"linear",value,time})}
-      exponentialRampToValueAtTime(value,time){this.events.push({method:"exponential",value,time})}
-      cancelScheduledValues(){}
-      setTargetAtTime(){}
-    }
-    class Node {
-      constructor(){this.gain=new AudioParam;this.frequency=new AudioParam;this.Q=new AudioParam;
-        this.threshold=new AudioParam;this.knee=new AudioParam;this.ratio=new AudioParam;
-        this.attack=new AudioParam;this.release=new AudioParam}
-      connect(dest){return dest}
-      start(time){this.started=time;sources.push(this)}
-      stop(time){this.stopped=time}
-    }
-    let context;
-    env.elements.get("monitorPower");
-    globalThis.window.AudioContext=class{
-      constructor(){context=this;this.currentTime=0;this.sampleRate=22050;this.state="running";this.destination=new Node}
-      createGain(){return new Node}
-      createDynamicsCompressor(){return new Node}
-      createBuffer(channels,frames){return {getChannelData:()=>new Float32Array(frames)}}
-      createOscillator(){const node=new Node;params.push(node.frequency);return node}
-      createBiquadFilter(){return new Node}
-      createBufferSource(){return new Node}
-      close(){this.state="closed";return Promise.resolve()}
-    };
-    const stop=playPowerSound();
-    assert.equal(typeof stop,"function");
-    assert.ok(sources.length>=35,"Relay, degaussing, fan, floppy clicks and beep must all play");
-    assert.ok(sources.some(x=>x.started<.03),"Relay begins as soon as user presses power");
-    assert.ok(sources.some(x=>x.started>=2&&x.started<=4.9),"Floppy seeks happen in the middle");
-    assert.ok(sources.some(x=>x.started>=5.42&&x.started<=5.5),"POST beep fires near the end");
-    assert.ok(params.some(p=>p.events.some(e=>e.value===920)),"POST frequency is generated");
-    assert.equal(BOOT_DURATION_MS,6600);
-    assert.deepEqual(BOOT_SOUND_CUES.map(x=>x.name),["relay","crt_degauss","fan_spinup","floppy_seek","post_beep"]);
-    env.advanceTo(BOOT_DURATION_MS+381);
-    assert.equal(context.state,"closed","Audio context is cleaned up after boot");
-    stop();
-  }finally{env.restore()}
+test("boot runs silently with no synthetic audio dependency",()=>{
+  const monitor=readFileSync("public/monitor.js","utf8");
+  assert.doesNotMatch(monitor,/playPowerSound|AudioContext|boot-audio|stopBootAudio/);
+  assert.match(monitor,/schedule\(ready,2900\)/);
 });
