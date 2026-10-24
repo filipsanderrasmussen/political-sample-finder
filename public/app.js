@@ -1,5 +1,5 @@
 const $=x=>document.getElementById(x);
-const state={rows:[],stats:null,q:"",speaker:"",favorites:false,playing:null,pending:null,loading:false,transcriptRequestId:0};
+const state={rows:[],stats:null,q:"",speaker:"",favorites:false,playing:null,pending:null,loading:false,transcriptRequestId:0,searchRequestId:0};
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const admin=()=>($("adminPassword").value||sessionStorage.getItem("psf.admin")||"");
 function notice(s,bad=false){const el=$("notification");el.textContent=s;el.className="notification"+(bad?" error":"");clearTimeout(notice.timer);notice.timer=setTimeout(()=>el.classList.add("hidden"),9000);}
@@ -12,12 +12,24 @@ async function authorize(){
  if(!admin()){if(!$("importDialog").open)$("importDialog").showModal();throw new Error("Angiv din APP_PASSWORD under Indlæs data.");}
  await post("/api/login",{});sessionStorage.setItem("psf.admin",admin());
 }
-function highlight(text,q){
- const words=q.trim().split(/\s+/).filter(Boolean);if(!words.length)return esc(text);
- const re=new RegExp("("+words.map(w=>w.replace(/[.*+?^$()|[\]{}\\]/g,"\\$&")).join("|")+")","gi");
- return String(text).split(re).map(part=>words.some(w=>w.toLowerCase()===part.toLowerCase())?"<mark>"+esc(part)+"</mark>":esc(part)).join("");
+function queryTokens(q){
+ return String(q||"").toLocaleLowerCase("da-DK").match(/[\p{L}\p{M}\p{N}_]+/gu)||[];
 }
-function excerpt(text,q){const w=q.trim().split(/\s+/)[0]?.toLowerCase()||"";const p=w?text.toLowerCase().indexOf(w):0;const a=Math.max(0,p-120),b=Math.min(text.length,Math.max(p,0)+240);return (a?"…":"")+text.slice(a,b)+(b<text.length?"…":"");}
+function highlight(text,q){
+ const words=new Set(queryTokens(q));
+ return String(text||"").split(/([\p{L}\p{M}\p{N}_]+)/gu)
+  .map(part=>words.has(part.toLocaleLowerCase("da-DK"))?"<mark>"+esc(part)+"</mark>":esc(part)).join("");
+}
+function excerpt(text,q){
+ const source=String(text||""),terms=new Set(queryTokens(q));
+ const tokens=source.matchAll(/[\p{L}\p{M}\p{N}_]+/gu);
+ let index=0;
+ for(const token of tokens){
+  if(terms.has(token[0].toLocaleLowerCase("da-DK"))){index=token.index;break;}
+ }
+ const from=Math.max(0,index-120),to=Math.min(source.length,index+240);
+ return (from?"…":"")+source.slice(from,to)+(to<source.length?"…":"");
+}
 function dateLabel(x){if(!x)return "Ukendt dato";return new Date(x+"T12:00:00").toLocaleDateString("da-DK",{day:"numeric",month:"short",year:"numeric"});}
 function mins(x){const m=/^(\d{1,2}):(\d{2})$/.exec(x||"");return m&&+m[1]<24&&+m[2]<60?+m[1]*60+ +m[2]:null;}
 function offset(v){if(v===null||v<0||!Number.isFinite(v))return "Ukendt";v=Math.floor(v);return [Math.floor(v/3600),Math.floor(v%3600/60),v%60].map(n=>String(n).padStart(2,"0")).join(":");}
@@ -55,10 +67,18 @@ function render(){
 async function stats(){state.stats=await api("/api/stats");render();}
 async function search(){
  state.q=$("query").value;state.speaker=$("speaker").value;
+ const current=++state.searchRequestId;
  if(!state.q.trim()&&!state.speaker.trim()&&!state.favorites){state.rows=[];render();return;}
  state.loading=true;$("count").textContent="SØGER…";
- try{const p=new URLSearchParams({q:state.q,speaker:state.speaker,favorites:state.favorites?"1":"0"});state.rows=(await api("/api/search?"+p)).results;}
- catch(e){state.rows=[];notice(e.message,true);}finally{state.loading=false;render();}
+ try{
+  const p=new URLSearchParams({q:state.q,speaker:state.speaker,favorites:state.favorites?"1":"0"});
+  const results=(await api("/api/search?"+p)).results;
+  if(current===state.searchRequestId)state.rows=results;
+ }catch(e){
+  if(current===state.searchRequestId){state.rows=[];notice(e.message,true);}
+ }finally{
+  if(current===state.searchRequestId){state.loading=false;render();}
+ }
 }
 function setTab(fav){state.favorites=fav;$("allTab").classList.toggle("selected",!fav);$("favTab").classList.toggle("selected",fav);search();}
 
@@ -308,8 +328,7 @@ function bind(){
  $("playerForward").onclick=()=>skipAudio(15);
  $("sampleAudio").onloadedmetadata=finishInitialSeek;
  $("sampleAudio").onerror=()=>{if(state.playing)$("playerStatus").textContent="Kunne ikke afspille MP3 her. Åbn originalen i stedet.";};
- $("searchBtn").onclick=search;
- for(const id of ["query","speaker"])$(id).onkeydown=e=>{if(e.key==="Enter")search();};
+ $("searchForm").onsubmit=e=>{e.preventDefault();search();};
  let timer;$("speaker").oninput=()=>{clearTimeout(timer);timer=setTimeout(search,350);};
  $("allTab").onclick=()=>setTab(false);$("favTab").onclick=()=>setTab(true);
  document.querySelectorAll("[data-query]").forEach(b=>b.onclick=()=>{$("query").value=b.dataset.query;search();});
