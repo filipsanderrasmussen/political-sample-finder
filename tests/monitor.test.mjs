@@ -73,11 +73,11 @@ test("real-world monitor is edge-to-edge with a physical switch; dialogs remain 
   assert.match(css,/\.monitor-screen\{[\s\S]*?overflow:auto/);
   assert.match(css,/\.monitor-shell\[data-power="off"\] \.terminal-frame/);
   assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
-  assert.match(css,/--bezel-side:clamp\\(15px,1\\.8vw,30px\\)/);
+  assert.match(css,/--bezel-side:clamp\(15px,1\.8vw,30px\)/);
   assert.match(css,/--panel-height:74px/);
-  assert.match(css,/\\.monitor-shell\\[data-power="off"\\] \\.monitor-boot\\{display:none\\}/);
-  assert.match(css,/\\.monitor-shell\\[data-power="off"\\] \\.monitor-screen\\{background:#010101/);
-  assert.match(css,/\\.monitor-shell\\[data-power="off"\\]::after\\{display:none\\}/);
+  assert.match(css,/\.monitor-shell\[data-power="off"\] \.monitor-boot\{display:none\}/);
+  assert.match(css,/\.monitor-shell\[data-power="off"\] \.monitor-screen\{background:#010101/);
+  assert.match(css,/\.monitor-shell\[data-power="off"\]::after\{display:none\}/);
 
   assert.match(app,/initMonitor\(\{/);
   assert.match(app,/onShutdown:\(\)=>\{/);
@@ -147,8 +147,8 @@ test("reduced motion gives short silent startup without text animation",()=>{
 });
 
 test("late-eighties CRT font is loaded with Danish-language capable fallback",()=>{
-  assert.match(html,/fonts\\.googleapis\\.com\\/css2\\?family=VT323/);
+  assert.match(html,/fonts\.googleapis\.com\/css2\?family=VT323/);
   assert.match(css,/font-family:"VT323",ui-monospace/);
-  assert.match(css,/\\.monitor-controls\\{[^}]*font-family:ui-monospace/);
-  assert.match(css,/\\.hero h1\\{[\\s\\S]*?font-size:clamp\\(60px,8\\.4vw,123px\\)/);
+  assert.match(css,/\.monitor-controls\{[^}]*font-family:ui-monospace/);
+  assert.match(css,/\.hero h1\{[\s\S]*?font-size:clamp\(60px,8\.4vw,123px\)/);
 });
