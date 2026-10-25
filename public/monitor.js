@@ -1,14 +1,21 @@
 // The terminal's front-panel power switch and deliberately theatrical start-up.
 // No network requests are needed to boot. The real search UI is initialized once
 // the monitor is on; only a successful boot is remembered per browser session.
-export const BOOT_STEPS = Object.freeze([
-  {at:120, text:"DATATERMINAL TD-2000"},
-  {at:570, text:"INITIALISERER BILLEDRØR"},
-  {at:1190,text:"KONTROL AF ARBEJDSLAGER ... OK"},
-  {at:1860,text:"INDLÆSER TERMINALPROGRAM"},
-  {at:2390,text:"SYSTEM KLAR"}
+// Fictional TD-2000 ROM/serial diagnostics inspired by period text terminals.
+// This is visual theatre, not a claim that a genuine 1987 computer is present.
+export const BOOT_DURATION_MS=5200;
+export const POWER_DOWN_MS=950;
+export const BOOT_STEPS=Object.freeze([
+  {at:760, text:"TD-2000 TERMINAL   ROM V1.7"},
+  {at:1280,text:"64 KB RAM ............... OK"},
+  {at:1770,text:"TEGNGENERATOR .......... OK"},
+  {at:2200,text:"TASTATUR ............... OK"},
+  {at:2650,text:"SERIEL PORT A    9600 8N1"},
+  {at:3050,text:"SERIEL PORT B    9600 8N1"},
+  {at:3580,text:"VENTER PAA VAERTSSYSTEM"},
+  {at:4220,text:"FORBINDELSE ............ OK"},
+  {at:4680,text:"INDLAESER TALEDATABASE 2000"}
 ]);
-
 const SESSION_KEY="td2000.monitor.booted";
 
 function storageGet(key){
@@ -47,9 +54,9 @@ export function initMonitor({onReady,onShutdown}){
     content.inert=next!=="on";
     content.setAttribute("aria-hidden",String(next!=="on"));
     power.setAttribute("aria-pressed",String(next==="on"));
-    power.setAttribute("aria-label",next==="on"?"Sluk skærmen":next==="booting"?"Opstart i gang":"Tænd skærmen");
-    power.disabled=next==="booting";
-    label.textContent=next==="on"?"SLUK":next==="booting"?"STARTER":"TÆND";
+    power.setAttribute("aria-label",next==="on"?"Sluk skærmen":next==="booting"?"Opstart i gang":next==="powering-down"?"Skærmen slukker":"Tænd skærmen");
+    power.disabled=next==="booting"||next==="powering-down";
+    label.textContent=next==="on"?"SLUK":next==="booting"?"STARTER":next==="powering-down"?"SLUKKER":"TÆND";
     offline.hidden=next!=="off";
     lines.hidden=next!=="booting";
     if(next==="off"||next==="booting")screen.scrollTop=0;
@@ -61,11 +68,24 @@ export function initMonitor({onReady,onShutdown}){
     onReady?.();
   };
   const powerOff=()=>{
+    if(state!=="on")return;
     clearTimers();
     storageRemove(SESSION_KEY);
-    setState("off");
-    lines.replaceChildren();
+    // Pause audio and dismiss dialogs as soon as the physical switch is thrown.
     onShutdown?.();
+    const reduceMotion=window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+    if(reduceMotion){
+      setState("off");
+      lines.replaceChildren();
+      return;
+    }
+    // Keep the phosphor visible while it loses brightness and definition.
+    setState("powering-down");
+    schedule(()=>{
+      setState("off");
+      lines.replaceChildren();
+      power.focus({preventScroll:true});
+    },POWER_DOWN_MS);
   };
   const powerOn=()=>{
     if(state!=="off")return;
@@ -81,11 +101,11 @@ export function initMonitor({onReady,onShutdown}){
       schedule(()=>{
         const row=document.createElement("div");
         row.className="monitor-boot-row";
-        row.textContent="> "+step.text;
+        row.textContent=step.text;
         lines.append(row);
       },step.at);
     }
-    schedule(ready,2900);
+    schedule(ready,BOOT_DURATION_MS);
   };
   power.addEventListener("click",()=>state==="on"?powerOff():powerOn());
   // Only one theatrical boot per tab session. The physical switch can
