@@ -63,6 +63,21 @@ if first:
         check["content_type"]=="audio/mpeg" and (magic.startswith(b"ID3") or magic[:1]==b"\xff"))
     if not check["pass"]:check["error"]=audio.get("error","Range or MP3 signature invalid")
     REPORT["checks"].append(check)
+    # Verify Kaltura's official MP3 host can be consumed directly by WebAudio
+    # from the browser; cross-origin AudioContext requires CORS, even for audio playback.
+    try:
+        req=urllib.request.Request(media,headers={"Origin":BASE,"Range":"bytes=0-1023","Accept":"audio/mpeg"})
+        with urllib.request.urlopen(req,timeout=18) as response:
+            buf=response.read(1024)
+            cors={"name":"direct Kaltura MP3 CORS","http":response.status,
+                  "allow_origin":response.headers.get("Access-Control-Allow-Origin"),
+                  "content_range":response.headers.get("Content-Range"),
+                  "content_type":response.headers.get("Content-Type"),"read_bytes":len(buf)}
+            cors["pass"]=(cors["http"]==206 and cors["allow_origin"] in ("*",BASE) and
+                          cors["content_type"]=="audio/mpeg" and len(buf)==1024)
+    except Exception as err:
+        cors={"name":"direct Kaltura MP3 CORS","pass":False,"error":str(err)[:240]}
+    REPORT["checks"].append(cors)
 else:
     REPORT["checks"].append({"name":"official MP3 proxy 1 KiB range","pass":False,"error":"No source-backed search result"})
 REPORT["passed"]=sum(1 for c in REPORT["checks"] if c.get("pass"))
