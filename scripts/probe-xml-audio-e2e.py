@@ -77,32 +77,44 @@ if status!=200 or h.get("Content-Type")!="audio/mpeg":raise RuntimeError("Not a 
 total=int(h["Content-Length"])
 status,initial,_=request(ran=(0,319999))
 if status!=206:raise RuntimeError("Remote server did not return MP3 byte range")
-# Check validated MPEG-1 Layer III frame and bitrate index in the first 8KB.
-rate=None
-for i in range(0,min(len(initial)-5,8000)):
-    head=struct.unpack_from(">I",initial,i)[0]
-    if (head&0xffe00000)!=0xffe00000 or ((head>>19)&3)!=3 or ((head>>17)&3)!=1:continue
-    br=(head>>12)&15;sr=(head>>10)&3
-    table=[0,32,40,48,56,64,80,96,112,128,160,192,224,256,320]
-    if br in (0,15) or sr==3:continue
-    kbps=table[br];sample_rate=[44100,48000,32000][sr]
-    step=144000*kbps//sample_rate+((head>>9)&1)
-    if i+step+4<len(initial) and (struct.unpack_from(">I",initial,i+step)[0]&0xffe00000)==0xffe00000:
-        rate=kbps
-        break
-if not rate:raise RuntimeError("No validated MP3 bitrate")
+# Demand five consecutive matching MPEG-1 Layer III frames to avoid false sync hits.
 id3=0
 if initial[:3]==b"ID3":id3=10+((initial[6]&127)<<21)+((initial[7]&127)<<14)+((initial[8]&127)<<7)+(initial[9]&127)
+table=[0,32,40,48,56,64,80,96,112,128,160,192,224,256,320]
+def get_header(blob,pos):
+    if pos<0 or pos+4>len(blob):return None
+    h=struct.unpack_from(">I",blob,pos)[0]
+    if (h&0xffe00000)!=0xffe00000 or ((h>>19)&3)!=3 or ((h>>17)&3)!=1:return None
+    br=(h>>12)&15;sr=(h>>10)&3
+    if br in (0,15) or sr==3:return None
+    kbps=table[br];sample_rate=[44100,48000,32000][sr]
+    frame_size=144000*kbps//sample_rate+((h>>9)&1)
+    return kbps,sample_rate,frame_size
+def first_verified_frame(blob,min_at=0):
+    for start in range(min_at,min(len(blob)-3000,24000)):
+        frame=get_header(blob,start)
+        if frame is None:continue
+        pos=start
+        if all_valid_sequence(blob,pos,frame):
+            return start,frame[0]
+    return None,None
+def all_valid_sequence(blob,start,frame):
+    pos=start
+    for _ in range(5):
+        info=get_header(blob,pos)
+        if info is None or info[:2]!=frame[:2]:return False
+        pos+=info[2]
+    return True
+_,rate=first_verified_frame(initial,id3)
+if rate is None:raise RuntimeError("No five-frame-consistent MPEG Layer 3 bitrate detected")
+if rate != 128:raise RuntimeError(f"Unexpected bitrate {rate}; refuse inaccurate time mapping")
 offset=int(id3+(speech["offset_seconds"]*rate*1000/8))
 if offset>=total-320000:raise RuntimeError("XML speech starts beyond MP3 bytes")
 status,middle,hr=request(ran=(offset,offset+319999))
 if status!=206 or len(middle)!=320000:raise RuntimeError("Timed MP3 byte range unavailable")
 # Seek forward to the first MP3 frame boundary.
-start=next((i for i in range(len(middle)-4) if
-    (struct.unpack_from(">I",middle,i)[0]&0xffe00000)==0xffe00000 and
-    ((struct.unpack_from(">I",middle,i)[0]>>19)&3)==3 and
-    ((struct.unpack_from(">I",middle,i)[0]>>17)&3)==1),None)
-if start is None:raise RuntimeError("No frame within desired byte range")
+start, mid_rate=first_verified_frame(middle)
+if start is None or mid_rate != rate:raise RuntimeError("No five-frame-consistent same-bitrate MP3 frames at target range")
 with tempfile.TemporaryDirectory() as temp:
     inp=Path(temp)/"speech.mp3";inp.write_bytes(middle[start:])
     out=Path(temp)/"speech.wav"
