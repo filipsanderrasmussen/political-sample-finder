@@ -18,10 +18,30 @@ test("phosphor terminal homepage keeps search controls and no marketing hero",()
   assert.match(html,/id="speaker"/);
   assert.match(html,/id="searchBtn" type="submit"/);
   assert.match(html,/id="query"[^>]*placeholder="Angiv søgestreng"/);
-  assert.match(html,/id="speaker"[^>]*aria-label="Filtrér på taler"/);
+  assert.match(html,/id="speaker"[^>]*placeholder="Alle talere"/);
+  assert.doesNotMatch(html,/Filtrér på taler \(valgfrit\)/);
   assert.doesNotMatch(html,/data-query=|HURTIGSØGNINGER|01 \/ SØG I ARKIVET|03 \/ FILTRÉR TALER/);
   assert.doesNotMatch(js,/quick-pads|\[data-query\]/);
   assert.doesNotMatch(html,/Find ordene\.|Hør stemmen\.|Søg i Folketingets referater, find omtrent|SYSTEM ONLINE|READY|AWAITING INPUT|SAMPLE FINDER/);
+});
+
+test("filters form one clear grid with aligned labels and sensible defaults",()=>{
+  assert.match(html,/class="filter-toolbar"/);
+  assert.match(html,/AFGRÆNS SØGNINGEN/);
+  for(const cls of ["filter-speaker","filter-party","filter-year-from","filter-year-to","filter-sort"]){
+    assert.match(html,new RegExp('class="filter-field '+cls+'"'));
+  }
+  assert.match(html,/class="search-filters"/);
+  assert.match(html,/id="partySummary"[^>]*>Alle partier<\/summary>/);
+  assert.match(html,/id="yearFrom"[^>]*placeholder="—"/);
+  assert.match(html,/id="yearTo"[^>]*placeholder="—"/);
+  assert.doesNotMatch(html,/id="yearFrom"[^>]*value="2010"/);
+  assert.doesNotMatch(html,/id="yearTo"[^>]*value="2026"/);
+  assert.match(css,/\.search-filters\{\s*display:grid/);
+  assert.match(css,/@container search-filter-panel \(max-width:780px\)/);
+  assert.match(css,/@container search-filter-panel \(max-width:490px\)/);
+  assert.match(js,/\$\("yearFrom"\)\.placeholder=first/);
+  assert.match(js,/\$\("yearTo"\)\.placeholder=last/);
 });
 
 test("actual live stats are bound to three terminal readouts",()=>{
