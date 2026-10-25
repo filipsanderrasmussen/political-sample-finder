@@ -624,37 +624,102 @@ footer{font-size:15px}
 }
 
 
-/* TALEDATABASE 2000: compact CRT filters + pagination, no marketing UI. */
-.search-filters{display:flex;align-items:end;flex-wrap:wrap;gap:10px;margin-top:12px}
-.filter-field{display:flex;flex-direction:column;gap:3px;min-width:100px;flex:0 1 150px}
-.filter-field label{font-size:14px;color:var(--muted);letter-spacing:.08em}
-.filter-field input,.filter-field select{
- width:100%;min-width:0;background:#080808;color:var(--accent);
- border:1px solid color-mix(in srgb,var(--accent) 40%,transparent);
- border-radius:0;padding:8px 6px;font:20px "VT323",ui-monospace,monospace;
- color-scheme:dark
+/* Search filters live in ONE labelled grid, adapting to terminal width. */
+.search-options{
+  display:block;
+  width:100%;
+  margin-top:8px;
+  container:search-filter-panel / inline-size;
 }
-.party-picker{flex:0 1 235px;min-width:170px;position:relative}
-.party-picker summary{display:block;cursor:pointer;color:var(--accent);padding:8px 10px;
- border:1px solid color-mix(in srgb,var(--accent) 40%,transparent);
- font:20px "VT323",ui-monospace,monospace}
-.party-picker summary::after{content:" ▾";float:right}
-.party-grid{position:absolute;top:100%;left:0;right:0;z-index:20;
- display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;
- margin:0;padding:14px;background:#080808;border:1px solid var(--accent);
- box-shadow:0 8px 15px rgba(0,0,0,.8);min-width:205px}
-.party-grid label{display:flex;align-items:center;gap:5px;cursor:pointer;font:20px "VT323",ui-monospace,monospace}
+.filter-toolbar{
+  display:flex;justify-content:space-between;align-items:baseline;gap:12px;
+  padding:15px 0 9px;
+  border-top:1px solid var(--border-soft);
+}
+.filter-heading{color:var(--muted);font-size:12px;font-weight:700;letter-spacing:.12em}
+#resetFilters.filter-reset{
+  appearance:none;border:0;background:transparent;color:var(--muted);
+  padding:3px 0;cursor:pointer;white-space:nowrap;
+  font:18px "VT323",ui-monospace,monospace;
+  text-decoration:underline;text-decoration-color:var(--border);
+  text-underline-offset:4px
+}
+#resetFilters.filter-reset:hover,#resetFilters.filter-reset:focus-visible{color:var(--accent)}
+.search-filters{
+  display:grid;
+  grid-template-columns:minmax(0,1.75fr) minmax(0,1.1fr) minmax(0,.72fr) minmax(0,.72fr) minmax(0,1.15fr);
+  align-items:end;gap:12px;width:100%;
+}
+.filter-field{display:flex;flex-direction:column;gap:7px;min-width:0}
+.filter-field label,.filter-field .filter-label{
+  color:var(--muted);font-size:14px;letter-spacing:.09em;
+  font-weight:400;line-height:1.1;
+}
+.filter-field input,.filter-field select,.filter-field .party-picker summary{
+  display:block;width:100%;height:46px;min-width:0;
+  background:#080808;color:var(--accent);
+  border:1px solid var(--border);border-radius:3px;
+  padding:9px 12px;font:23px "VT323",ui-monospace,monospace;
+  line-height:1.2;color-scheme:dark;
+}
+.filter-field input:focus,.filter-field select:focus,.filter-field .party-picker summary:focus-visible{
+  outline:1px solid var(--accent);outline-offset:2px;
+  border-color:var(--accent)
+}
+.filter-field input::placeholder{color:var(--muted);opacity:.8}
+.filter-field input[type="number"]{appearance:textfield;-moz-appearance:textfield}
+.filter-field input[type="number"]::-webkit-inner-spin-button,
+.filter-field input[type="number"]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.filter-speaker .speakerfilter{
+  font:23px "VT323",ui-monospace,monospace;
+  width:100%;height:46px;
+  padding:9px 12px;background:#080808;
+}
+.filter-party .party-picker{width:100%;min-width:0;position:relative}
+.filter-party .party-picker summary{
+  display:flex;align-items:center;justify-content:space-between;gap:7px;
+  cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  list-style:none;
+}
+.filter-party .party-picker summary::-webkit-details-marker{display:none}
+.filter-party .party-picker summary::after{
+  content:"▾";flex:none;font:19px "VT323",ui-monospace,monospace;
+}
+.filter-party .party-picker[open] summary::after{content:"▴"}
+.party-grid{
+  position:absolute;z-index:30;top:calc(100% + 5px);left:0;
+  width:max(100%,230px);min-width:0;max-width:min(350px,80vw);
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 5px;
+  margin:0;padding:13px;
+  background:#080808;border:1px solid var(--accent);
+  border-radius:3px;box-shadow:0 12px 22px rgb(0 0 0 / .8);
+}
+.party-grid label{display:flex;align-items:center;gap:5px;cursor:pointer;
+  font:20px "VT323",ui-monospace,monospace;color:var(--accent)}
 .party-grid input{accent-color:var(--accent)}
-#resetFilters{font-size:17px;align-self:end;padding:8px 10px}
 .search-pages{display:flex;align-items:center;justify-content:center;gap:14px;margin:22px 0 14px}
 .search-pages.hidden{display:none}
 .search-pages span{color:var(--accent);font:22px "VT323",ui-monospace,monospace}
 .search-pages button{font-size:20px}
 .search-pages button:disabled{opacity:.35;cursor:not-allowed}
-@media(max-width:580px){.filter-field{flex:1 1 38%}.party-picker{flex:1 1 48%}
- #resetFilters{flex:1 1 44%}.search-filters{gap:8px}.search-pages{gap:7px}
- .search-pages button{font-size:16px;padding:8px}.search-pages span{font-size:18px}}
-
+@container search-filter-panel (max-width:780px){
+  .search-filters{grid-template-columns:repeat(6,minmax(0,1fr));gap:12px}
+  .filter-speaker,.filter-party{grid-column:span 3}
+  .filter-year-from,.filter-year-to,.filter-sort{grid-column:span 2}
+}
+@container search-filter-panel (max-width:490px){
+  .search-filters{gap:11px}
+  .filter-speaker,.filter-party,.filter-sort{grid-column:span 6}
+  .filter-year-from,.filter-year-to{grid-column:span 3}
+  .filter-toolbar{padding-top:12px}
+  .filter-heading{font-size:10px}
+  #resetFilters.filter-reset{font-size:17px}
+}
+@media(max-width:580px){
+ .search-pages{gap:8px}
+ .search-pages button{font-size:16px;padding:8px}
+ .search-pages span{font-size:18px}
+}
 
 /* Archival coverage: real searchable inventory, not all Folketing meetings. */
 .stat-value.stat-period{font-size:clamp(21px,3vw,37px);letter-spacing:.01em;white-space:nowrap}
