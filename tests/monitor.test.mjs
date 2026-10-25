@@ -191,7 +191,7 @@ test("startup diagnostic text resembles a serial-ROM terminal, not a marketing s
   assert.ok(BOOT_STEPS.some(x=>x.text.includes("TEGNGENERATOR")));
   assert.ok(BOOT_STEPS.some(x=>x.text.includes("TASTATUR")));
   assert.ok(BOOT_STEPS.some(x=>x.text.includes("9600 8N1")));
-  assert.ok(BOOT_STEPS.some(x=>x.text.includes("VÆRTSSYSTEM")));
+  assert.ok(BOOT_STEPS.some(x=>x.text.includes("FORBINDELSE")));
   assert.ok(BOOT_STEPS.at(-1).at<BOOT_DURATION_MS);
   assert.ok(css.includes("align-items:flex-start;justify-content:flex-start"));
   assert.ok(css.includes("animation:boot-line-materialize .22s"));
