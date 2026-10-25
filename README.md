@@ -20,8 +20,8 @@ Søg i **rigtige folketingsreferater med verificeret original MP3**. Teksten er 
 4. Arbejdsmappe er repositoryets rod (/). Worker-navnet skal være **political-sample-finder** (som i wrangler.jsonc). Hvis Cloudflare beder om deploy command, brug **npx wrangler deploy**.
 5. Vælg **Save and Deploy**. D1-bindingen skal hedde **DB**. Nyere Wrangler kan oprette databasen automatisk. Kontrollér, at bindingen er synlig efter deploy. Ellers opret og tilknyt en D1-database gennem dashboardet.
 6. Åbn Workeren: **Settings → Variables and Secrets → Add → Secret**. Navn: **APP_PASSWORD**. Værdi: en selvvalgt stærk adgangskode (mindst 12 tegn). Gem med **Deploy**. Læg aldrig adgangskoden i GitHub.
-7. Åbn den nye workers.dev-adresse, vælg **Indlæs data** og skriv adgangskoden. Prøv samling **20251**, møde **41**. Hvis server-fetch af PDF fejler, download original-PDF'en og vælg **Indlæs valgt PDF**.
-8. Vælg **Opdatér lydindeks**, feed **Folketingssalen**, og søg f.eks. efter **ansvar**.
+7. Verificér at seneste deployment på Cloudflare indeholder `public/archive/xml/manifest.json`. Kontroller `https://<din-worker>/api/archive/status` for `xml_meetings` og `xml_imported_meetings`. GitHub Actions' egen commit kan kræve et efterfølgende deployment på Cloudflare.
+8. Cron importerer XML-gradvist. Hvis du vil fremskynde processen, log ind i **Arkivstatus** og brug **Indeksér lydverificeret XML**. Søg dernæst efter f.eks. **ansvar**, og bekræft at hvert resultat har knappen **Lyt** og en original MP3.
 
 ## Automatisk XML + verificeret MP3 (oktober 2026)
 
