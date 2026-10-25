@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 import {BOOT_STEPS,BOOT_DURATION_MS,POWER_DOWN_MS,initMonitor} from "../public/monitor.js";
+import {preloadBootAudio} from "../public/boot-audio.js";
 
 const html=readFileSync("public/index.html","utf8");
 const css=readFileSync("public/style.css","utf8");
@@ -172,7 +173,10 @@ test("late-eighties CRT font is loaded with Danish-language capable fallback",()
 
 test("boot runs silently with no synthetic audio dependency",()=>{
   const monitor=readFileSync("public/monitor.js","utf8");
-  assert.doesNotMatch(monitor,/playPowerSound|AudioContext|boot-audio|stopBootAudio/);
+  assert.doesNotMatch(monitor,/playPowerSound|AudioContext|stopBootAudio/);
+  assert.match(monitor,/bootAudio\.play\(\)/);
+  assert.match(monitor,/bootAudio\.stop\(\)/);
+  assert.ok(html.includes('data-boot-sound-src=""'));
   assert.ok(monitor.includes("schedule(ready,BOOT_DURATION_MS)"));
   assert.equal(BOOT_DURATION_MS,5200);
 });
@@ -200,4 +204,58 @@ test("reduced-motion users can turn monitor off immediately",()=>{
     assert.equal(shutdown,1);
     assert.equal(env.timers.size,0);
   }finally{env.restore()}
+});
+
+test("supplied recording starts buffering at initialization and plays synchronously on click",()=>{
+  const calls=[];
+  const fakeAudio={
+    preload:"none",src:"",currentTime:12,
+    load(){calls.push("load")},
+    play(){calls.push("play");return Promise.resolve()},
+    pause(){calls.push("pause")}
+  };
+  const sound=preloadBootAudio("/assets/my-boot.mp3",()=>fakeAudio);
+  assert.equal(fakeAudio.preload,"auto");
+  assert.equal(fakeAudio.src,"/assets/my-boot.mp3");
+  assert.deepEqual(calls,["load"],"preload happens before pressing the switch");
+  sound.play();
+  assert.deepEqual(calls,["load","pause","play"],"click launches playback immediately");
+  assert.equal(fakeAudio.currentTime,0);
+  sound.stop();
+  assert.equal(calls.at(-1),"pause");
+});
+
+test("physical power switch plays user recording at click time and cuts it off on shutdown",()=>{
+  const env=fakeEnvironment();
+  const previousAudio=globalThis.Audio;
+  const calls=[];
+  try{
+    env.elements.get("monitorShell").dataset.bootSoundSrc="/user-boot.mp3";
+    globalThis.Audio=class{
+      constructor(){this.currentTime=0}
+      load(){calls.push("load")}
+      play(){calls.push("play");return Promise.resolve()}
+      pause(){calls.push("pause")}
+    };
+    const monitor=initMonitor({});
+    assert.deepEqual(calls,["load"]);
+    env.elements.get("monitorPower").click();
+    assert.equal(monitor.state,"booting");
+    assert.deepEqual(calls,["load","pause","play"]);
+    env.advanceTo(BOOT_DURATION_MS);
+    env.elements.get("monitorPower").click();
+    assert.equal(monitor.state,"powering-down");
+    assert.equal(calls.at(-1),"pause");
+  }finally{
+    if(previousAudio===undefined)delete globalThis.Audio;
+    else globalThis.Audio=previousAudio;
+    env.restore();
+  }
+});
+
+test("without a supplied file there is no attempt to load or play audio",()=>{
+  let invoked=0;
+  const audio=preloadBootAudio("",()=>{invoked++;throw Error("not expected")});
+  audio.play();audio.stop();
+  assert.equal(invoked,0);
 });
