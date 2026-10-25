@@ -9,8 +9,8 @@ Søg i **rigtige folketingsreferater med verificeret original MP3**. Teksten er 
 - Folketingets **officielle XML** hentes fra `oda.ft.dk` via en begrænset GitHub Actions-kørsel. Kun møder med matchende, HTTP HEAD-verificeret original Kaltura-MP3 og **færdigredigerede referater** accepteres.
 - GitHub committer små JSON-mødefiler i `public/archive/xml/`. Cloudflare Cron importerer dem i 60-talebatches og opdaterer FTS5.
 - Ældre PDF-arkivfiler bevares, men importeres ikke længere automatisk. Deres taler vises kun, hvis en original MP3 er verificeret og koblet til møde-id.
-- MP3 hentes i browseren **først når brugeren afspiller eller klipper**. Serveren bruger en låst byte-range proxy. Ingen videobehandling.
-- GitHub-testene er grønne. Verificér særskilt **Cloudflare-deployment, den faktiske D1-import og brugerfladens liveadfærd**.
+- MP3 hentes i browseren **først når brugeren afspiller eller klipper**. WAV-klipperen benytter Kalturas officielle CORS- og byte-range-lydkilde direkte; proxyen bevares som sikker serverfunktion. Ingen videobehandling.
+- Den nye version er verificeret live på workers.dev: FTS5-søgning, pagination, partifilter og udelukkende lydresultater er testet. En ægte Chrome-test har bekræftet 1 sek. WAV med lyd fra 02:00:00 i en 2024-MP3. XML-import i D1 udføres gradvist af Cron.
 
 ## Installation kun i browser (ingen Terminal)
 
@@ -25,7 +25,7 @@ Søg i **rigtige folketingsreferater med verificeret original MP3**. Teksten er 
 
 ## Automatisk XML + verificeret MP3 (oktober 2026)
 
-1. Workflow: `.github/workflows/build-xml-audio-archive.yml`, dagligt kl. 04:43 UTC eller manuelt fra GitHub Actions. Script: `scripts/build_xml_audio_archive.py`.
+1. Workflow: `.github/workflows/build-xml-audio-archive.yml`, dagligt kl. 04:43 UTC eller manuelt fra GitHub Actions. Script: `scripts/build_xml_audio_archive.py`. Arkivrobotten gemmer sin rullende position i `scripts/xml-audio-position.json`, så endnu ufærdige møder ikke spærrer vejen til ældre lyd.
 2. Læs `src/audio-index.json` (officielle RSS-enclosures). For hvert møde kontrolleres samling, dato, mødenummer og et **direkte MP3-link** via HTTP HEAD med `audio/mpeg`. **Ingen video**.
 3. Hent `<samling>_M<møde>_helemoedet.xml` via FTP `oda.ft.dk/ODAXML/Referat/samling/` og kontrollér både metadata og tekst. Møder med **»Talen er under udarbejdelse«** eller **»afventer korrektur«** accepteres først, når referatet er færdigt.
 4. Gem højst 3 fuldførte møder per kørsel i `public/archive/xml/` og opdater den versionsmærkede manifestfil.
@@ -42,9 +42,9 @@ Søg i **rigtige folketingsreferater med verificeret original MP3**. Teksten er 
 2. Find passagen ved at bruge lydafspilleren og ±15 sek. spring.
 3. Klik **SÆT IN** og **SÆT OUT**, og justér præcist med ±0,01 / ±0,10 sek. eller skriv tidskoder som `01:02:03.450`.
 4. Klik **FORHØR UDKLIP**. Højst 30 sekunder.
-5. Klik **GEM WAV**. Den originale MP3 streames via en sikker, same-origin Range-proxy; browseren optager kun det valgte tidsrum i realtid og gemmer stereo PCM i en WAV-fil.
+5. Klik **GEM WAV**. Den originale MP3 streames direkte fra Kaltura (CORS + Range), så Cloudflare ikke skal videresende hele optagelsen. Browseren optager kun det valgte tidsrum i realtid og gemmer stereo PCM i en WAV-fil.
 
-Kliplængden fastsættes i hele PCM-frames ved browserens samplefrekvens. Positionen ved start af en komprimeret MP3 afhænger dog af browserens dekoder/seek og kan variere lidt; referatets oprindelige klokkeslæt er kun et cirka-anker. **Kontrollér altid præcise klipgrænser ved at lytte.** Forhør bruger den almindelige afspillers tidsstyring og er også vejledende. En streamingfejl må ikke få serveren til at hente vilkårlige fremmede URL'er: proxyen tillader kun Folketingets Kaltura MP3-mønster. En eksport på 10 sekunder tager omtrent 10 sekunder.
+Kliplængden fastsættes i hele PCM-frames ved browserens samplefrekvens. Positionen ved start af en komprimeret MP3 afhænger dog af browserens dekoder/seek og kan variere lidt; referatets oprindelige klokkeslæt er kun et cirka-anker. **Kontrollér altid præcise klipgrænser ved at lytte.** Forhør bruger den almindelige afspillers tidsstyring og er også vejledende. Klipperen accepterer udelukkende det officielle Kaltura MP3-mønster, og den tilbageværende serverproxy bruger samme stramme whitelist. En eksport på 10 sekunder tager omtrent 10 sekunder.
 
 Lydens kilde er Folketinget. Rettigheder til offentliggørelse og musikalsk genbrug skal vurderes særskilt. Der foretages ingen lydoptagelse på serveren, og WAV-filen genereres i browseren.
 
