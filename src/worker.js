@@ -229,8 +229,8 @@ async function findSpeeches(env,params) {
     "NOT (m.samling='20251' AND m.date >= '2026-04-10' AND m.date < '2026-10-06')"];
   const values=match?[match]:[];
   const from=(params.get("from")||"").trim(),to=(params.get("to")||"").trim();
-  if(from && /^20\d\d$/.test(from)){conditions.push("m.date>=?");values.push(from+"-01-01");}
-  if(to && /^20\d\d$/.test(to)){conditions.push("m.date<?");values.push(String(Number(to)+1)+"-01-01");}
+  if(from && /^(?:19|20)\d{2}$/.test(from)){conditions.push("m.date>=?");values.push(from+"-01-01");}
+  if(to && /^(?:19|20)\d{2}$/.test(to)){conditions.push("m.date<?");values.push(String(Number(to)+1)+"-01-01");}
   const parties=(params.get("party")||"").split(",").map(x=>x.trim().toUpperCase())
      .filter(x=>/^[A-ZÆØÅ]{1,6}$/.test(x)).slice(0,12);
   if(parties.length){
