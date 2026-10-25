@@ -12,9 +12,9 @@ export const BOOT_STEPS=Object.freeze([
   {at:2200,text:"TASTATUR ............... OK"},
   {at:2650,text:"SERIEL PORT A    9600 8N1"},
   {at:3050,text:"SERIEL PORT B    9600 8N1"},
-  {at:3580,text:"VENTER PAA VAERTSSYSTEM"},
+  {at:3580,text:"VENTER PÅ VÆRTSSYSTEM"},
   {at:4220,text:"FORBINDELSE ............ OK"},
-  {at:4680,text:"INDLAESER TALEDATABASE 2000"}
+  {at:4680,text:"INDLÆSER TALEDATABASE 2000"}
 ]);
 const SESSION_KEY="td2000.monitor.booted";
 
