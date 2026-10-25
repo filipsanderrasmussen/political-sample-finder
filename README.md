@@ -20,6 +20,16 @@ Find citater fra **rigtige folketingsreferater**, se taler og klokkeslæt, og å
 7. Åbn den nye workers.dev-adresse, vælg **Indlæs data** og skriv adgangskoden. Prøv samling **20251**, møde **41**. Hvis server-fetch af PDF fejler, download original-PDF'en og vælg **Indlæs valgt PDF**.
 8. Vælg **Opdatér lydindeks**, feed **Folketingssalen**, og søg f.eks. efter **ansvar**.
 
+## Automatisk arkivudvidelse (oktober 2026)
+
+- GitHub Actions: `.github/workflows/backfill-archive.yml` scanner de officielle referat-PDF'er dagligt kl. 04:17 UTC. Workflowet kan også startes manuelt i Actions.
+- `scripts/backfill_archive.py` henter højst **12 nye møder** og undersøger højst **36 kilder** per kørsel. Den udfylder huller i eksisterende samlinger og arbejder tilbage mod 2013. Et aktuelt kommende møde afprøves højst en gang om dagen.
+- Hver fil valideres: rigtig PDF, dato svarer til samlingen, mindst ét taleafsnit med taler og klokkeslæt, størrelse under Cloudflares filgrænse. Mislykkede kilder markeres til senere forsøg — ingen opdigtede data.
+- Lokal validering: `python -m pip install PyMuPDF==1.26.7 && python scripts/test_backfill.py`.
+- Arkivudvidelsen standser ved 750 MiB statiske JSON-arkivfiler, indtil en anden lagringsstrategi er besluttet.
+- Når de genererede filer **er deployet** til Cloudflare, indlæser Workerens planlagte Cron dem gradvist i D1. Kontroller både GitHub Actions-loggen, Cloudflare-deployment og `/api/archive/status`. GitHub Actions-commits med `GITHUB_TOKEN` udløser ikke nødvendigvis alle eksterne CI/CD-automatiseringer.
+- Daglig D1-kvote på Free kan fortsat begrænse, hvor hurtigt møderne bliver søgbare. En GitHub-fil er **ikke det samme** som et allerede indekseret møde.
+
 ## Lydklipper / TD-2000
 
 1. Find et reelt citat, og åbn **Original lyd**.
