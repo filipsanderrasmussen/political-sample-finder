@@ -69,7 +69,7 @@ def try_ftp():
         ftp.login("anonymous","taledatabase-test@example.invalid")
         result["ftp"]["logged_in"]=True
         ftp.set_pasv(True)
-        for path in ["/ODAXML/Referat/20241","/ODAXML/Referater/20241","/ODAXML/Referat","/ODAXML/Referater"]:
+        for path in ["/ODAXML/Referat/samling/20241","/ODAXML/Referat/samling","/ODAXML/Referat/20241","/ODAXML/Referat"]:
             row={"path":path}
             result["ftp"]["directories_checked"].append(row)
             try:
