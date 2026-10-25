@@ -95,7 +95,7 @@ test("search audio accurately says that playback begins at the speech turn, not 
 });
 
 test("interface uses Danish terminal language without changing working search or playback",()=>{
-  assert.match(html,/SYSTEM KLAR/);
+  assert.match(html,/FOLKETINGETS TALER \/\/ ORIGINAL LYD/);
   assert.match(html,/AFVENTER SØGNING/);
   assert.doesNotMatch(html,/class="blinking-cursor"|class="hero-cursor"/);
   assert.match(js,/INGEN FUND/);
