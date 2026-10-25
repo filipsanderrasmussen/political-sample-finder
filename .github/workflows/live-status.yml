@@ -11,6 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 4
     steps:
+      - uses: actions/checkout@v4
       - name: Compare deployed app with new XML archive API (read only)
         env:
           APP_URL: https://political-sample-finder.filip-8d4.workers.dev
@@ -45,6 +46,20 @@ jobs:
                 report["endpoints"][name]=summary
             except urllib.error.HTTPError as exc:report["endpoints"][name]={"http":exc.code,"error":str(exc)}
             except Exception as exc:report["endpoints"][name]={"error":str(exc)}
+          # Compare prepared files on GitHub with public Cloudflare assets.
+          try:
+            with open("public/archive/xml/manifest.json",encoding="utf-8") as source:
+              built=json.load(source)
+            req=urllib.request.Request(target+"/archive/xml/manifest.json",headers={"Accept":"application/json","User-Agent":"TALEDATABASE-2000-asset-check/1.0"})
+            with urllib.request.urlopen(req,timeout=20) as response:
+              deployed=json.loads(response.read(200001))
+            report["asset_sync"]={
+              "github_xml_meetings":len(built),
+              "deployed_xml_meetings":len(deployed),
+              "missing_from_cloudflare":[x["id"] for x in built if not any(x["id"]==y["id"] and x["version"]==y["version"] for y in deployed)][:12]
+            }
+          except Exception as exc:
+            report["asset_sync"]={"error":str(exc)[:170]}
           # Latest deployed HTML and actual archive year coverage.
           try:
             with urllib.request.urlopen(target+"/",timeout=20) as response:
