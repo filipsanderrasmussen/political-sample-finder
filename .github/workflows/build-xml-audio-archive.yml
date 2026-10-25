@@ -3,7 +3,7 @@ name: Indlæs officielle XML-taler med verificeret MP3
 on:
   workflow_dispatch:
   schedule:
-    - cron: '43 4 * * *'
+    - cron: '43 4,10,16,22 * * *'
   push:
     branches: [main]
     paths:
@@ -20,7 +20,7 @@ concurrency:
 jobs:
   prepare:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
         with:
@@ -31,7 +31,7 @@ jobs:
       - name: Syntax control
         run: python -m py_compile scripts/build_xml_audio_archive.py
       - name: Download verified official XML for MP3 meetings
-        run: python -u scripts/build_xml_audio_archive.py --max-new 3 --max-checks 15
+        run: python -u scripts/build_xml_audio_archive.py --max-new 8 --max-checks 40
       - name: Commit only source-backed prepared meeting assets
         run: |
           git add public/archive/xml/ scripts/xml-audio-position.json
