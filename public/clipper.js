@@ -3,6 +3,10 @@
 // Streaming PCM capture avoids fetching an entire multi-hour parliamentary file.
 export const MAX_CLIP_SECONDS=30;
 export const MIN_CLIP_SECONDS=.05;
+const OFFICIAL_DIRECT_MP3=/^https:\/\/cdnapi\.kaltura\.com\/p\/2158211\/sp\/0\/playManifest\/entryId\/1_[a-z0-9]+\/protocol\/http\/flavorParamIds\/0\/format\/url\/\d{2}-\d{2}-\d{4}_\d{2}-\d{2}_salen\.mp3$/i;
+export function approvedClipSource(src){
+ return typeof src==="string"&&src.length<=400&&OFFICIAL_DIRECT_MP3.test(src);
+}
 
 export function formatClipTime(value){
   if(!Number.isFinite(value)||value<0)return "00:00:00.000";
@@ -100,8 +104,12 @@ export async function captureWav({src,start,end,signal,onProgress=()=>{}}){
   signal?.addEventListener("abort",abort,{once:true});
   let worklet=null,watch=null;
   try{
+    // Official Kaltura MP3 supports CORS and native HTTP Range streaming.
+    // Direct media prevents Cloudflare caching from stripping Range headers.
+    if(!approvedClipSource(src))throw new Error("Kun Folketingets originale MP3-lyd kan eksporteres.");
+    media.crossOrigin="anonymous";
     media.preload="auto";
-    media.src="/api/audio-stream?source="+encodeURIComponent(src);
+    media.src=src;
     media.load();
     await Promise.all([
       resumed,
