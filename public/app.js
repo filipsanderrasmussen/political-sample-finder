@@ -1,5 +1,7 @@
 import { initMonitor } from "./monitor.js";
+import { initClipper } from "./clipper.js";
 const $=x=>document.getElementById(x);
+let clipper=null;
 const state={rows:[],stats:null,q:"",speaker:"",favorites:false,playing:null,pending:null,loading:false,transcriptRequestId:0,searchRequestId:0,adminSession:false};
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 // The server keeps a 30-day signed HttpOnly session; no password storage.
@@ -187,6 +189,7 @@ function openPlayer(row,p){
  $("playerDialog").showModal();
  audio.src=p.mp3_url;
  audio.load();
+ clipper?.open(p.mp3_url,position);
  loadTranscript(row);
  if(position!==null&&position>=0) {
    state.pending=position;
@@ -347,9 +350,10 @@ async function importPdf(bytes){
  }finally{b.disabled=u.disabled=false;}
 }
 function bind(){
+ clipper=initClipper({audio:$("sampleAudio")});
  $("openImport").onclick=()=>{if(!$("importDialog").open)$("importDialog").showModal();};$("emptyImport").onclick=$("openImport").onclick;
  $("closeImport").onclick=()=>$("importDialog").close();$("closePlayer").onclick=()=>$("playerDialog").close();
- $("playerDialog").onclose=()=>{$("sampleAudio").pause();state.playing=null;state.pending=null;state.transcriptRequestId++;};
+ $("playerDialog").onclose=()=>{$("sampleAudio").pause();clipper?.close();state.playing=null;state.pending=null;state.transcriptRequestId++;};
  $("playerStart").oninput=()=>{
    calcOffset();
    if(state.playing)storeAnchor(state.playing.p.mp3_url,$("playerStart").value);
@@ -431,6 +435,7 @@ initMonitor({
  onReady:startTerminal,
  onShutdown:()=>{
    $("sampleAudio").pause();
+   clipper?.close();
    if($("playerDialog").open)$("playerDialog").close();
    if($("importDialog").open)$("importDialog").close();
  }
