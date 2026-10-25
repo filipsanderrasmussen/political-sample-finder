@@ -50,8 +50,20 @@ try{
      meetingCount:stats.verified_audio_meetings,speechCount:stats.audio_speeches
    };
  });
+ report.workspace=await page.evaluate(()=>{
+   const title=document.getElementById("siteTitle");
+   const header=document.querySelector(".topbar");
+   const results=document.querySelector(".results-head");
+   return {
+     titleInHeader:header.contains(title),
+     countersInHeader:["statMeetings","statSpeeches"].every(id=>header.contains(document.getElementById(id))),
+     sortAbsent:!document.getElementById("sortResults"),
+     resultTop:Math.round(results.getBoundingClientRect().top),
+     searchTop:Math.round(document.querySelector(".searchbar").getBoundingClientRect().top)
+   };
+ });
  report.filtersDesktop=await page.evaluate(()=>{
-   const ids=["speaker","partySummary","yearFrom","yearTo","sortResults"];
+   const ids=["speaker","partySummary","yearFrom","yearTo"];
    const blocks=ids.map(id=>{
      const r=document.getElementById(id).getBoundingClientRect();
      return {id,top:Math.round(r.top),left:Math.round(r.left),
@@ -63,7 +75,7 @@ try{
  await page.setViewportSize({width:460,height:820});
  report.filtersMobile=await page.evaluate(()=>{
    const parent=document.querySelector(".search-options").getBoundingClientRect();
-   const ids=["speaker","partySummary","yearFrom","yearTo","sortResults"];
+   const ids=["speaker","partySummary","yearFrom","yearTo"];
    const blocks=ids.map(id=>{
      const r=document.getElementById(id).getBoundingClientRect();
      return {id,top:Math.round(r.top),left:Math.round(r.left),
@@ -71,7 +83,7 @@ try{
    });
    return {blocks,withinFrame:blocks.every(x=>x.left>=parent.left-3&&x.right<=parent.right+3),
      responsiveOrder:blocks[0].top<blocks[1].top&&blocks[1].top<blocks[2].top&&
-        Math.abs(blocks[2].top-blocks[3].top)<=3&&blocks[3].top<blocks[4].top};
+        Math.abs(blocks[2].top-blocks[3].top)<=3};
  });
  await page.setViewportSize({width:1280,height:720});
  report.export=await page.evaluate(async src=>{
@@ -95,7 +107,9 @@ try{
  report.ok=report.http===200&&report.export.wavHeader==="RIFF"&&report.export.waveMark==="WAVE"&&report.export.bytes>10000&&report.export.peak>0&&report.export.nonzero>1000
    &&report.archiveUi.labels.includes("MØDER I SALEN")
    &&report.archiveUi.labels.includes("TALEINDLÆG")
-   &&report.archiveUi.labels.includes("ARKIVETS ÅR")
+   &&report.archiveUi.period!==""
+   &&report.workspace.titleInHeader&&report.workspace.countersInHeader
+   &&report.workspace.sortAbsent&&report.workspace.resultTop<730
    &&report.archiveUi.coverage.includes("IKKE KOMPLET DÆKNING")
    // The archive auto-imports during test runs; API and DOM snapshots
    // need not have identical totals if Cron writes between these two reads.
