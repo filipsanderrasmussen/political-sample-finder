@@ -86,7 +86,7 @@ function render(){
   const video="https://mobiltv.ft.dk/video/"+encodeURIComponent(r.samling)+"/salen/"+Number(r.meeting_no);
   const speaker=/^(Spm\.?\s*nr\.?|\d+\)|Til\s+(?:udenrigs|justits|stats|udlændinge|social|miljø|indenrigs|finans))/i.test(r.speaker)?"Taler ikke sikkert identificeret":r.speaker;
   const mp3Links=podcasts.slice(0,3).map((a,i)=>'<a class="link-btn" href="'+esc(a.mp3_url)+'" target="_blank" rel="noopener noreferrer">↓ Åbn MP3'+(podcasts.length>1?' '+(i+1):'')+' ↗</a>').join("");
-  const listen=podcasts.slice(0,3).map((a,i)=>'<button class="link-btn listen-btn" data-listen="'+esc(r.id)+'" data-ix="'+i+'">♫ Lyt fra ca. '+esc(offset(seconds(r,a)))+(podcasts.length>1?" · kandidat "+(i+1):"")+'</button>').join("");
+  const listen=podcasts.slice(0,3).map((a,i)=>'<button class="link-btn listen-btn" data-listen="'+esc(r.id)+'" data-ix="'+i+'">♫ Lyt fra indlæggets start · ca. '+esc(offset(seconds(r,a)))+(podcasts.length>1?" · kandidat "+(i+1):"")+'</button>').join("");
   return '<article class="result"><div class="result-terminal-top"><span class="result-index">#'+String(i+1).padStart(3,"0")+'</span><span>// REFERATFUND</span></div><div class="result-meta"><b class="speaker-name">'+esc(speaker)+'</b><span class="date">'+dateLabel(r.date)+' · Møde '+r.meeting_no+'</span></div>'+
   '<p class="quote">“'+highlight(excerpt(r.content,state.q),state.q)+'”</p><div class="result-footer"><span class="time-pill">◷ Kl. '+esc(r.clock)+'</span>'+
   '<span class="micro">'+(p?"✓ MP3 fundet til møde nr. "+r.meeting_no:(r.audio_source==="not_in_feed"?"Mødet er ikke i det nuværende RSS-feed":r.audio_source==="feed_unavailable"?"Lydfeed kunne ikke hentes":"Ingen MP3 fundet endnu"))+'</span>'+
@@ -195,11 +195,11 @@ function openPlayer(row,p){
  const suspect=/^(Spm\.?\s*nr\.?|Til\s+(?:udenrigs|justits|stats|udlændinge|social|miljø|indenrigs|finans)|\d+[).])/i.test(speaker);
  $("playerQuote").textContent="“"+excerpt(row.content,state.q)+"”";
  $("playerSpeaker").textContent=suspect?"Taler ikke sikkert identificeret":speaker;
- $("playerContext").textContent="Møde "+row.meeting_no+" · "+dateLabel(row.date)+" · kl. "+row.clock+" i referatet";
+ $("playerContext").textContent="Møde "+row.meeting_no+" · "+dateLabel(row.date)+" · indlægget begynder kl. "+row.clock;
  $("playerStart").value=anchor(p.mp3_url)||row.first_clock||row.clock;
  $("playerMp3Link").href=p.mp3_url;
  $("transcriptPdf").href=row.source_url+"#page="+Number(row.page||1);
- $("playerStatus").textContent="";
+ $("playerStatus").textContent="Afspilning fra indlæggets begyndelse. Søgeordet kan forekomme senere.";
  $("playerDialog").querySelector(".player-advanced").open=false;
  const position=calcOffset();
  $("playerDialog").showModal();
