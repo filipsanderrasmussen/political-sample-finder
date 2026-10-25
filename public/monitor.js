@@ -38,10 +38,9 @@ export function initMonitor({onReady,onShutdown}){
   const screen=document.getElementById("monitorScreen");
   const content=document.getElementById("terminalFrame");
   const power=document.getElementById("monitorPower");
-  const label=document.getElementById("monitorPowerLabel");
   const offline=document.getElementById("monitorOffline");
   const lines=document.getElementById("monitorBootLines");
-  if(!shell||!screen||!content||!power||!label||!offline||!lines)
+  if(!shell||!screen||!content||!power||!offline||!lines)
     throw new Error("Skærmens betjeningspanel mangler.");
   const bootAudio=preloadBootAudio(shell.dataset.bootSoundSrc);
   const powerOffAudio=preloadBootAudio(shell.dataset.powerOffSoundSrc);
@@ -63,7 +62,6 @@ export function initMonitor({onReady,onShutdown}){
     power.setAttribute("aria-pressed",String(next==="on"));
     power.setAttribute("aria-label",next==="on"?"Sluk skærmen":next==="booting"?"Opstart i gang":next==="powering-down"?"Skærmen slukker":"Tænd skærmen");
     power.disabled=next==="booting"||next==="powering-down";
-    label.textContent=next==="on"?"SLUK":next==="booting"?"STARTER":next==="powering-down"?"SLUKKER":"TÆND";
     offline.hidden=next!=="off";
     lines.hidden=next!=="booting";
     if(next==="off"||next==="booting")screen.scrollTop=0;
@@ -93,7 +91,7 @@ export function initMonitor({onReady,onShutdown}){
     schedule(()=>{
       setState("off");
       lines.replaceChildren();
-      power.focus({preventScroll:true});
+      // Do not show the glowing focus ring on an unpowered front panel.
     },POWER_DOWN_MS);
   };
   const powerOn=()=>{
@@ -121,6 +119,6 @@ export function initMonitor({onReady,onShutdown}){
   // Only one theatrical boot per tab session. The physical switch can
   // still turn the monitor off and back on again to show it to a friend.
   if(storageGet(SESSION_KEY)==="1")ready();
-  else {setState("off");power.focus({preventScroll:true})}
+  else setState("off"); // No auto-focus: the pre-boot green focus ring looked like a lit switch.
   return {get state(){return state},powerOn,powerOff};
 }
