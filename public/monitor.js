@@ -1,22 +1,23 @@
 import {preloadBootAudio} from "./boot-audio.js";
 
 // The terminal's front-panel power switch and deliberately theatrical start-up.
-// No network requests are needed to boot. The real search UI is initialized once
-// the monitor is on; only a successful boot is remembered per browser session.
+// The real search UI is initialized only after boot. The supplied MP3 is
+// preloaded before the switch is pressed; no synthetic audio is generated.
 // Fictional TD-2000 ROM/serial diagnostics inspired by period text terminals.
 // This is visual theatre, not a claim that a genuine 1987 computer is present.
-export const BOOT_DURATION_MS=5200;
+export const BOOT_DURATION_MS=12900;
 export const POWER_DOWN_MS=950;
 export const BOOT_STEPS=Object.freeze([
-  {at:760, text:"TD-2000 TERMINAL   ROM V1.7"},
-  {at:1280,text:"64 KB RAM ............... OK"},
-  {at:1770,text:"TEGNGENERATOR .......... OK"},
-  {at:2200,text:"TASTATUR ............... OK"},
-  {at:2650,text:"SERIEL PORT A    9600 8N1"},
-  {at:3050,text:"SERIEL PORT B    9600 8N1"},
-  {at:3580,text:"VENTER PÅ VÆRTSSYSTEM"},
-  {at:4220,text:"FORBINDELSE ............ OK"},
-  {at:4680,text:"INDLÆSER TALEDATABASE 2000"}
+  {at:850,  text:"TD-2000 TERMINAL   ROM V1.7"},
+  {at:1860, text:"64 KB RAM ............... OK"},
+  {at:2900, text:"TEGNGENERATOR .......... OK"},
+  {at:4100, text:"TASTATUR ............... OK"},
+  {at:5300, text:"SERIEL PORT A    9600 8N1"},
+  {at:6350, text:"SERIEL PORT B    9600 8N1"},
+  {at:7410, text:"VENTER PÅ VÆRTSSYSTEM"},
+  {at:9140, text:"FORBINDELSE ............ OK"},
+  {at:10330,text:"INDLÆSER TALEDATABASE 2000"},
+  {at:11870,text:"SYSTEM KLAR"}
 ]);
 const SESSION_KEY="td2000.monitor.booted";
 

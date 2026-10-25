@@ -171,18 +171,20 @@ test("late-eighties CRT font is loaded with Danish-language capable fallback",()
 });
 
 
-test("boot runs silently with no synthetic audio dependency",()=>{
+test("the supplied original MP3 is preloaded with no synthetic audio",()=>{
   const monitor=readFileSync("public/monitor.js","utf8");
   assert.doesNotMatch(monitor,/playPowerSound|AudioContext|stopBootAudio/);
   assert.match(monitor,/bootAudio\.play\(\)/);
   assert.match(monitor,/bootAudio\.stop\(\)/);
-  assert.ok(html.includes('data-boot-sound-src=""'));
+  assert.ok(html.includes('data-boot-sound-src="/boot.mp3"'));
+  assert.ok(html.includes('<link rel="preload" as="audio" href="/boot.mp3" type="audio/mpeg">'));
   assert.ok(monitor.includes("schedule(ready,BOOT_DURATION_MS)"));
-  assert.equal(BOOT_DURATION_MS,5200);
+  assert.equal(BOOT_DURATION_MS,12900);
 });
 
 test("startup diagnostic text resembles a serial-ROM terminal, not a marketing splash",()=>{
-  assert.equal(BOOT_STEPS.length,9);
+  assert.equal(BOOT_STEPS.length,10);
+  assert.equal(BOOT_STEPS.at(-1).text,"SYSTEM KLAR");
   assert.equal(BOOT_STEPS[0].text,"TD-2000 TERMINAL   ROM V1.7");
   assert.ok(BOOT_STEPS.some(x=>x.text.includes("64 KB RAM")));
   assert.ok(BOOT_STEPS.some(x=>x.text.includes("TEGNGENERATOR")));
@@ -258,4 +260,11 @@ test("without a supplied file there is no attempt to load or play audio",()=>{
   const audio=preloadBootAudio("",()=>{invoked++;throw Error("not expected")});
   audio.play();audio.stop();
   assert.equal(invoked,0);
+});
+
+
+test("actual uploaded boot.mp3 is bundled as a complete original recording",()=>{
+  const bytes=readFileSync("public/boot.mp3");
+  assert.equal(bytes.length,157215,"Original MP3 is preserved byte-for-byte in the repo");
+  assert.equal(bytes.subarray(0,3).toString("ascii"),"ID3");
 });
