@@ -1,0 +1,35 @@
+name: Test Folketingets XML-referater
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/probe-ft-xml.py'
+      - '.github/workflows/probe-ft-xml.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  test-xml:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Syntaxkontrol
+        run: python -m py_compile scripts/probe-ft-xml.py
+      - name: Hent et rigtigt XML-referat fra Folketingets arkiv
+        run: python -u scripts/probe-ft-xml.py
+      - name: Gem testresultatet
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ft-xml-test
+          path: |
+            ft-xml-probe.json
+            ft-xml-probe.md
+          if-no-files-found: warn
