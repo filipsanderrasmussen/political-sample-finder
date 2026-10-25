@@ -12,7 +12,7 @@ test("phosphor terminal homepage keeps search controls and no marketing hero",()
   assert.match(html,/TALEDATABASE/);
   assert.match(html,/<span class="hero-number">2000/);
   assert.match(html,/<title>Taledatabase 2000/);
-  assert.match(html,/UOFFICIELT SØGEVÆRKTØJ/);
+  assert.match(html,/TALEDATABASE 2000 \/\/ EDB-VÆRKTØJ TIL LYDSØGNING I FOLKETINGETS TALER/);
   assert.match(html,/id="searchForm"/);
   assert.match(html,/id="query"/);
   assert.match(html,/id="speaker"/);
