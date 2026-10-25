@@ -6,8 +6,7 @@ on:
       - scripts/build_transcript_archive.py
       - src/audio-index.json
   workflow_dispatch:
-  schedule:
-    - cron: "43 5 * * *"
+  # Legacy PDF builder kept for manual fallback only; XML is the primary source.
 permissions:
   contents: write
 concurrency:
