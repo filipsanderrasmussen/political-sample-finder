@@ -5,19 +5,16 @@ import {preloadBootAudio} from "./boot-audio.js";
 // preloaded before the switch is pressed; no synthetic audio is generated.
 // Fictional TD-2000 ROM/serial diagnostics inspired by period text terminals.
 // This is visual theatre, not a claim that a genuine 1987 computer is present.
-export const BOOT_DURATION_MS=12900;
+export const BOOT_DURATION_MS=3650;
 export const POWER_DOWN_MS=950;
 export const BOOT_STEPS=Object.freeze([
-  {at:850,  text:"TD-2000 TERMINAL   ROM V1.7"},
-  {at:1860, text:"64 KB RAM ............... OK"},
-  {at:2900, text:"TEGNGENERATOR .......... OK"},
-  {at:4100, text:"TASTATUR ............... OK"},
-  {at:5300, text:"SERIEL PORT A    9600 8N1"},
-  {at:6350, text:"SERIEL PORT B    9600 8N1"},
-  {at:7410, text:"VENTER PÅ VÆRTSSYSTEM"},
-  {at:9140, text:"FORBINDELSE ............ OK"},
-  {at:10330,text:"INDLÆSER TALEDATABASE 2000"},
-  {at:11870,text:"SYSTEM KLAR"}
+  {at:260, text:"TD-2000 TERMINAL   ROM V1.7"},
+  {at:760, text:"64 KB RAM ............... OK"},
+  {at:1260,text:"TEGNGENERATOR .......... OK"},
+  {at:1740,text:"TASTATUR ............... OK"},
+  {at:2280,text:"SERIEL PORT A    9600 8N1"},
+  {at:2810,text:"FORBINDELSE ............ OK"},
+  {at:3220,text:"SYSTEM KLAR"}
 ]);
 const SESSION_KEY="td2000.monitor.booted";
 
@@ -42,6 +39,7 @@ export function initMonitor({onReady,onShutdown}){
   if(!shell||!screen||!content||!power||!label||!offline||!lines)
     throw new Error("Skærmens betjeningspanel mangler.");
   const bootAudio=preloadBootAudio(shell.dataset.bootSoundSrc);
+  const powerOffAudio=preloadBootAudio(shell.dataset.powerOffSoundSrc);
   const timers=new Set();
   let state="off";
   const schedule=(fn,ms)=>{
@@ -77,6 +75,7 @@ export function initMonitor({onReady,onShutdown}){
     storageRemove(SESSION_KEY);
     // Pause audio and dismiss dialogs as soon as the physical switch is thrown.
     bootAudio.stop();
+    powerOffAudio.play(); // Directly in the click handler; no network delay.
     onShutdown?.();
     const reduceMotion=window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
     if(reduceMotion){
