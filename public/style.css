@@ -392,9 +392,10 @@ body::after{display:none}
 .monitor-model span{color:#999}
 .monitor-control-group{display:flex;align-items:center;gap:13px}
 .monitor-power-led{
-  display:block;width:13px;height:13px;border-radius:50%;background:#090909;
-  border:1px solid #777;box-shadow:inset 0 1px 2px #000;
-  transition:background .3s,box-shadow .3s;
+  display:block;width:13px;height:13px;border-radius:50%;
+  background:#050505;border:1px solid #353535;
+  box-shadow:inset 0 1px 3px #000;
+  transition:background .3s,border-color .3s,box-shadow .3s;
 }
 .monitor-shell[data-power="on"] .monitor-power-led,
 .monitor-shell[data-power="booting"] .monitor-power-led{
@@ -402,18 +403,18 @@ body::after{display:none}
   box-shadow:0 0 10px color-mix(in srgb,var(--accent) 70%,transparent);
 }
 .monitor-power-button{
-  display:flex;align-items:center;justify-content:center;gap:9px;
-  min-width:128px;min-height:45px;padding:5px 18px;
+  display:flex;align-items:center;justify-content:center;
+  width:52px;height:50px;min-width:52px;min-height:50px;padding:0;
   border:1px solid #888;border-top-color:#aaa;border-bottom-color:#161616;
-  border-radius:5px;color:#f0f0f0;background:linear-gradient(#4b4b4b,#202020);
+  border-radius:6px;color:#dedede;background:linear-gradient(#4b4b4b,#202020);
   box-shadow:inset 0 1px 0 #777,0 2px 3px #111;
-  font-size:12px;font-weight:800;letter-spacing:.09em;
+  font-weight:800;
 }
 .monitor-power-button:hover:not(:disabled){background:linear-gradient(#595959,#303030)}
 .monitor-power-button:active:not(:disabled){box-shadow:inset 0 2px 4px #090909}
 .monitor-power-button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .monitor-power-button:disabled{opacity:.75;cursor:progress}
-.monitor-power-icon{font-size:18px;line-height:1}
+.monitor-power-icon{font-size:26px;line-height:1;color:inherit;text-shadow:none;user-select:none}
 @media(max-width:790px){
   .monitor-shell{
     --bezel-side:23px;--bezel-top:23px;--panel-height:80px;
@@ -431,7 +432,7 @@ body::after{display:none}
   .monitor-shell::after{border-radius:21px / 17px}
   .monitor-controls{padding:5px 8px 8px 11px}
   .monitor-model{font-size:8px;letter-spacing:.08em}
-  .monitor-power-button{min-height:39px;min-width:98px;padding:3px 9px}
+  .monitor-power-button{width:45px;height:43px;min-width:45px;min-height:43px;padding:0}
   .monitor-control-group{gap:7px}
   .monitor-boot{
     padding:24px 15px;font-size:clamp(18px,5vw,27px);
