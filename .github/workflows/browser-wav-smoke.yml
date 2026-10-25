@@ -1,0 +1,32 @@
+name: Real browser WAV clip test
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/browser-wav-smoke.mjs'
+      - '.github/workflows/browser-wav-smoke.yml'
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install browser test tools
+        run: |
+          npm install --no-save --ignore-scripts --no-audit --no-fund playwright
+          npx playwright install chromium --with-deps
+      - name: Test actual MP3 seek and 1s WAV export
+        run: node scripts/browser-wav-smoke.mjs
+      - name: Save diagnostic only, no audio
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-wav-diagnostic
+          path: browser-wav-smoke.json
+          if-no-files-found: warn
