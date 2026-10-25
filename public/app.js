@@ -413,7 +413,7 @@ function bind(){
  };
  api("/api/archive/status").then(r=>{
    $("archiveState").textContent=r.archive_meetings
-     ?(r.indexed_meetings+" af "+(state.stats?.audio_archive_meetings||r.archive_meetings)+" lydmøder har søgbar tekst · "+r.indexed_speeches.toLocaleString("da-DK")+" taleafsnit. Opdateres automatisk.")
+     ?(r.indexed_meetings+" / "+r.archive_meetings+" klargjorte møder indekseret · "+r.indexed_speeches.toLocaleString("da-DK")+" søgbare taleafsnit · "+r.remaining_meetings+" afventer import. Opdateres automatisk.")
      :"Referatarkivet klargøres automatisk fra Folketingstidende.";
  }).catch(()=>{$("archiveState").textContent="Arkivstatus er midlertidigt utilgængelig.";});
 
