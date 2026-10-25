@@ -16,6 +16,8 @@ jobs:
           node --check public/app.js
       - name: Parser regression tests
         run: node --test tests/*.test.mjs
+      - name: Official XML archive regression tests
+        run: python3 -m unittest discover -s tests -p 'test_*.py'
       - name: SQLite FTS5 integration tests
         run: python3 tests/fts_sqlite.py
       - name: Check Cloudflare Worker bundle
