@@ -629,7 +629,7 @@ footer{font-size:15px}
 .filter-field{display:flex;flex-direction:column;gap:3px;min-width:100px;flex:0 1 150px}
 .filter-field label{font-size:14px;color:var(--muted);letter-spacing:.08em}
 .filter-field input,.filter-field select{
- width:100%;min-width:0;background:#060806;color:var(--accent);
+ width:100%;min-width:0;background:#080808;color:var(--accent);
  border:1px solid color-mix(in srgb,var(--accent) 40%,transparent);
  border-radius:0;padding:8px 6px;font:20px "VT323",ui-monospace,monospace;
  color-scheme:dark
@@ -641,7 +641,7 @@ footer{font-size:15px}
 .party-picker summary::after{content:" ▾";float:right}
 .party-grid{position:absolute;top:100%;left:0;right:0;z-index:20;
  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;
- margin:0;padding:14px;background:#080b08;border:1px solid var(--accent);
+ margin:0;padding:14px;background:#080808;border:1px solid var(--accent);
  box-shadow:0 8px 15px rgba(0,0,0,.8);min-width:205px}
 .party-grid label{display:flex;align-items:center;gap:5px;cursor:pointer;font:20px "VT323",ui-monospace,monospace}
 .party-grid input{accent-color:var(--accent)}
