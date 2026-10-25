@@ -1,0 +1,35 @@
+name: Test MP3-arkiv og præcisionsklip
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/probe-mp3-history-seek.py'
+      - '.github/workflows/probe-mp3-history-seek.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install FFmpeg
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+      - name: Syntax control
+        run: python -m py_compile scripts/probe-mp3-history-seek.py
+      - name: Historical MP3 and two-hour precision seek
+        run: python -u scripts/probe-mp3-history-seek.py
+      - name: Upload full findings
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mp3-historical-and-midfile
+          path: ft-mp3-history-seek.json
+          if-no-files-found: warn
