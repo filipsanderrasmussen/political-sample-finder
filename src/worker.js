@@ -301,14 +301,15 @@ async function endpoint(request,env,url) {
   await init(env);
   const path=url.pathname,method=request.method;
   if(method==="GET" && path==="/api/stats"){
-    const [meetings,speeches,podcasts,dated,items,verifiedMeetings,verifiedSpeeches]=await env.DB.batch([
+    const [meetings,speeches,podcasts,dated,items,verifiedMeetings,verifiedSpeeches,coverage]=await env.DB.batch([
       env.DB.prepare("SELECT COUNT(*) n FROM meetings WHERE status='ready' AND NOT (samling='20251' AND date>='2026-04-10' AND date<'2026-10-06')"),
       env.DB.prepare("SELECT COALESCE(SUM(speech_count),0) n FROM meetings WHERE status='ready' AND NOT (samling='20251' AND date>='2026-04-10' AND date<'2026-10-06')"),
       env.DB.prepare("SELECT COUNT(*) n FROM podcasts"),
       env.DB.prepare("SELECT COUNT(*) n FROM podcasts WHERE date IS NOT NULL"),
       env.DB.prepare("SELECT id,title,date,source_url,speech_count FROM meetings WHERE status='ready' ORDER BY imported_at DESC LIMIT 15"),
       env.DB.prepare("SELECT COUNT(*) n FROM meeting_audio a JOIN meetings m ON m.id=a.meeting_id WHERE m.status='ready'"),
-      env.DB.prepare("SELECT COALESCE(SUM(m.speech_count),0) n FROM meeting_audio a JOIN meetings m ON m.id=a.meeting_id WHERE m.status='ready'")
+      env.DB.prepare("SELECT COALESCE(SUM(m.speech_count),0) n FROM meeting_audio a JOIN meetings m ON m.id=a.meeting_id WHERE m.status='ready'"),
+      env.DB.prepare("SELECT MIN(m.date) earliest,MAX(m.date) latest FROM meeting_audio a JOIN meetings m ON m.id=a.meeting_id WHERE m.status='ready' AND m.date IS NOT NULL")
     ]);
     const archive=await archiveStatus(env).catch(err=>({archive_error:String(err)}));
     const xmlArchive=await xmlArchiveStatus(env).catch(err=>({xml_archive_error:String(err)}));
@@ -317,6 +318,8 @@ async function endpoint(request,env,url) {
       audio_archive_links:offlinePodcastIndex.length,
       verified_audio_meetings:verifiedMeetings.results[0].n,
       audio_speeches:verifiedSpeeches.results[0].n,
+      searchable_first_date:coverage.results[0]?.earliest||null,
+      searchable_last_date:coverage.results[0]?.latest||null,
       audio_archive_meetings:new Set(offlinePodcastIndex.map(x=>x.date+":"+x.meeting_no)).size,
       ...archive,...xmlArchive,
       protected:!!env.APP_PASSWORD});
