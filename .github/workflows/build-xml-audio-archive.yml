@@ -1,0 +1,45 @@
+name: Indlæs officielle XML-taler med verificeret MP3
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '43 4 * * *'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/build_xml_audio_archive.py'
+      - '.github/workflows/build-xml-audio-archive.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: official-xml-audio-archive
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Syntax control
+        run: python -m py_compile scripts/build_xml_audio_archive.py
+      - name: Download verified official XML for MP3 meetings
+        run: python -u scripts/build_xml_audio_archive.py --max-new 3 --max-checks 15
+      - name: Commit only source-backed prepared meeting assets
+        run: |
+          git add public/archive/xml/
+          if git diff --cached --quiet; then
+            echo 'No new audio-backed transcripts'
+            exit 0
+          fi
+          git config user.name 'taledatabase-arkivar[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'Archive verified MP3-backed XML speeches'
+          git push origin HEAD:main
