@@ -25,14 +25,16 @@ Søg i **rigtige folketingsreferater med verificeret original MP3**. Teksten er 
 
 ## Automatisk XML + verificeret MP3 (oktober 2026)
 
-1. Workflow: `.github/workflows/build-xml-audio-archive.yml`, dagligt kl. 04:43 UTC eller manuelt fra GitHub Actions. Script: `scripts/build_xml_audio_archive.py`. Arkivrobotten gemmer sin rullende position i `scripts/xml-audio-position.json`, så endnu ufærdige møder ikke spærrer vejen til ældre lyd.
+1. Workflow: `.github/workflows/build-xml-audio-archive.yml`, **fire gange dagligt** (kl. 04:43, 10:43, 16:43 og 22:43 UTC) eller manuelt fra GitHub Actions. Højst **8 nye møder og 40 XML-forsøg pr. kørsel**. Script: `scripts/build_xml_audio_archive.py`. Arkivrobotten gemmer sin rullende position i `scripts/xml-audio-position.json`, så endnu ufærdige møder ikke spærrer vejen til ældre lyd. Første tirsdag i oktober bestemmer grundsamlingen, og `1`-/`2`-samlinger kontrolleres mod den faktiske mødedato. Gentagne MP3-enclosures tælles kun én gang pr. dato/mødenummer.
 2. Læs `src/audio-index.json` (officielle RSS-enclosures). For hvert møde kontrolleres samling, dato, mødenummer og et **direkte MP3-link** via HTTP HEAD med `audio/mpeg`. **Ingen video**.
 3. Hent `<samling>_M<møde>_helemoedet.xml` via FTP `oda.ft.dk/ODAXML/Referat/samling/` og kontrollér både metadata og tekst. Møder med **»Talen er under udarbejdelse«** eller **»afventer korrektur«** accepteres først, når referatet er færdigt.
-4. Gem højst 3 fuldførte møder per kørsel i `public/archive/xml/` og opdater den versionsmærkede manifestfil.
-5. Når disse assets **er deployet**, indlæser Cloudflare Workerens Cron højst tre batches à 60 taleafsnit pr. kørsel. En færdig import registrerer MP3-link og tidsstempler sammen med mødet; den vises først ved `status=ready`.
+4. Gem højst 8 fuldførte møder per kørsel i `public/archive/xml/` og opdater den versionsmærkede manifestfil. Kun møder med færdigt referat og direkte verificeret original MP3 indgår.
+5. Når disse assets **er deployet**, indlæser Cloudflare Workerens Cron **seks batches à 60 taleafsnit**, to gange i timen. En færdig import registrerer MP3-link og tidsstempler sammen med mødet; den vises først ved `status=ready`.
 6. Separat verificerer `src/audio-registry.js` op til 8 af eksisterende officielle MP3-links pr. Cron-kørsel for at bevare relevante PDF-indekserede taler med lyd.
 7. Den gamle PDF-tilbagefyldning i `.github/workflows/backfill-archive.yml` **kører ikke automatisk** længere. Der er alene en manuel nødudgang til ældre data.
 8. Kontrollér `/api/stats`, `/api/archive/status`, GitHub Actions-loggen og det faktiske Cloudflare-deployment. GitHub Actions-commits med `GITHUB_TOKEN` behøver ikke automatisk udløse alle eksterne CI/CD-processer.
+
+**To importtrin:** GitHub henter XML og verifierer MP3; Cloudflare indlæser senere JSON i D1 og FTS5. `/api/archive/status` angiver `xml_meetings` (klargjort), `xml_imported_meetings` (færdigindlæst) og `xml_remaining_meetings` (afventer). Tallene for klargjorte XML-filer må **ikke** lægges oven i produktionsdatabasens taleantal, fordi importen kan erstatte ældre PDF-baserede afsnit fra de samme møder. En separat GitHub Action, `live-status.yml`, kontrollerer at XML-manifestet er deployet til Cloudflare.
 
 **Dækningsgrænse:** Det offentligt verificerede MP3-feed rækker pt. tilbage til 8. november 2024. Ældre lyd kan først tilføjes, når en reel afspillelig original-MP3 er dokumenteret.
 
