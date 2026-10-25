@@ -41,11 +41,12 @@ test("FTS5 keeps word matching, filters before pagination and joins only verifie
   assert.ok(sql);
   assert.match(sql,/speech_fts MATCH \?/);
   assert.match(sql,/s\.party IN \(\?,\?\)/);
+  assert.match(sql,/s\.speaker LIKE \?/);
   assert.match(sql,/m\.date>=\?/);
   assert.match(sql,/m\.date<\?/);
   assert.match(sql,/LIMIT \? OFFSET \?/);
   assert.ok(!sql.includes("LIMIT 1000"));
-  assert.deepEqual(params.at(-1),['content:"ulv"',"2025-01-01","2027-01-01","S","V",26,25]);
+  assert.deepEqual(params.at(-1),['content:"ulv"',"2025-01-01","2027-01-01","S","V","% (S)","% (V)",26,25]);
 });
 
 test("25-result pages report whether further results exist",async()=>{
