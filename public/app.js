@@ -2,7 +2,7 @@ import { initMonitor } from "./monitor.js";
 import { initClipper } from "./clipper.js";
 const $=x=>document.getElementById(x);
 let clipper=null;
-const state={rows:[],stats:null,q:"",speaker:"",favorites:false,playing:null,pending:null,loading:false,transcriptRequestId:0,searchRequestId:0,adminSession:false};
+const state={rows:[],stats:null,q:"",speaker:"",favorites:false,playing:null,pending:null,loading:false,transcriptRequestId:0,searchRequestId:0,adminSession:false,page:0,hasMore:false};
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 // The server keeps a 30-day signed HttpOnly session; no password storage.
 function notice(s,bad=false){const el=$("notification");el.textContent=s;el.className="notification"+(bad?" error":"");clearTimeout(notice.timer);notice.timer=setTimeout(()=>el.classList.add("hidden"),9000);}
@@ -50,20 +50,23 @@ function excerpt(text,q){
  return (from?"…":"")+source.slice(from,to)+(to<source.length?"…":"");
 }
 function dateLabel(x){if(!x)return "Ukendt dato";return new Date(x+"T12:00:00").toLocaleDateString("da-DK",{day:"numeric",month:"short",year:"numeric"});}
-function mins(x){const m=/^(\d{1,2}):(\d{2})$/.exec(x||"");return m&&+m[1]<24&&+m[2]<60?+m[1]*60+ +m[2]:null;}
+function mins(x){const m=/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(x||"");return m&&+m[1]<24&&+m[2]<60&&+(m[3]||0)<60?+m[1]*60+ +m[2]+Number(m[3]||0)/60:null;}
 function offset(v){if(v===null||v<0||!Number.isFinite(v))return "Ukendt";v=Math.floor(v);return [Math.floor(v/3600),Math.floor(v%3600/60),v%60].map(n=>String(n).padStart(2,"0")).join(":");}
 function anchor(url){try{return localStorage.getItem("psf.anchor:"+url);}catch{return null;}}
 function storeAnchor(url,val){try{localStorage.setItem("psf.anchor:"+url,val);}catch{}}
 function seconds(row,p){const a=mins(row.clock),b=mins(anchor(p.mp3_url)||row.first_clock||row.clock);return a===null||b===null?null:(a-b)*60;}
 function render(){
- const meet=Number(state.stats?.meetings||0);
- const speech=Number(state.stats?.speeches||0);
- const audio=Number(state.stats?.audio_archive_meetings||0);
+ const meet=Number(state.stats?.verified_audio_meetings||0);
+ const speech=Number(state.stats?.audio_speeches||0);
+ const audio=Number(state.stats?.verified_audio_meetings||0);
  $("statMeetings").textContent=meet.toLocaleString("da-DK");
  $("statSpeeches").textContent=speech.toLocaleString("da-DK");
  $("statAudio").textContent=audio.toLocaleString("da-DK");
  $("stats").textContent=meet+" søgbare møder, "+speech.toLocaleString("da-DK")+" taleafsnit, "+audio+" møder med lyd";
- $("count").textContent=state.loading?"SØGER":((state.q.trim()||state.speaker.trim()||state.favorites)?String(state.rows.length).padStart(2,"0")+" FUNDET"+(state.rows.length===120?" / MAKS.":""):"KLAR TIL SØGNING");
+ $("count").textContent=state.loading?"SØGER":((state.q.trim()||state.speaker.trim()||state.favorites)?String(state.rows.length).padStart(2,"0")+" VIST · SIDE "+(state.page+1)+(state.hasMore?" · FLERE →":""):"KLAR TIL SØGNING");
+ const pages=$("searchPages");pages.classList.toggle("hidden",!(state.page>0||state.hasMore));
+ $("prevPage").disabled=state.page===0;$("nextPage").disabled=!state.hasMore;
+ $("pageLabel").textContent="SIDE "+(state.page+1);
  const empty=$("empty");empty.classList.toggle("hidden",state.loading||state.rows.length>0);
  const searching=!!(state.q.trim()||state.speaker.trim()||state.favorites);
  empty.querySelector("h2").textContent=searching?"INGEN FUND":"AFVENTER SØGNING";
@@ -78,7 +81,7 @@ function render(){
   return '<article class="result"><div class="result-terminal-top"><span class="result-index">#'+String(i+1).padStart(3,"0")+'</span><span>// REFERATFUND</span></div><div class="result-meta"><b class="speaker-name">'+esc(speaker)+'</b><span class="date">'+dateLabel(r.date)+' · Møde '+r.meeting_no+'</span></div>'+
   '<p class="quote">“'+highlight(excerpt(r.content,state.q),state.q)+'”</p><div class="result-footer"><span class="time-pill">◷ Kl. '+esc(r.clock)+'</span>'+
   '<span class="micro">'+(p?"✓ MP3 fundet til møde nr. "+r.meeting_no:(r.audio_source==="not_in_feed"?"Mødet er ikke i det nuværende RSS-feed":r.audio_source==="feed_unavailable"?"Lydfeed kunne ikke hentes":"Ingen MP3 fundet endnu"))+'</span>'+
-  '<a class="link-btn" href="'+esc(video)+'" target="_blank" rel="noopener noreferrer">▶ Video fra mødet ↗</a>'+
+  
   '<a class="link-btn muted-link" href="'+esc(r.source_url)+'#page='+Number(r.page||1)+'" target="_blank" rel="noopener noreferrer">Referat ↗</a>'+
   mp3Links+listen+
 
@@ -91,23 +94,27 @@ function render(){
  });
 }
 async function stats(){state.stats=await api("/api/stats");render();}
-async function search(){
+async function search(resetPage=false){
+ if(resetPage)state.page=0;
  state.q=$("query").value;state.speaker=$("speaker").value;
  const current=++state.searchRequestId;
- if(!state.q.trim()&&!state.speaker.trim()&&!state.favorites){state.rows=[];render();return;}
+ if(!state.q.trim()&&!state.speaker.trim()&&!state.favorites){state.rows=[];state.hasMore=false;render();return;}
  state.loading=true;$("count").textContent="SØGER…";
  try{
-  const p=new URLSearchParams({q:state.q,speaker:state.speaker,favorites:state.favorites?"1":"0"});
-  const results=(await api("/api/search?"+p)).results;
-  if(current===state.searchRequestId)state.rows=results;
+  const p=new URLSearchParams({q:state.q,speaker:state.speaker,favorites:state.favorites?"1":"0",
+   from:$("yearFrom").value,to:$("yearTo").value,
+   sort:$("sortResults").value,party:[...document.querySelectorAll('input[name="party"]:checked')].map(x=>x.value).join(","),
+   page:String(state.page)});
+  const data=await api("/api/search?"+p);
+  if(current===state.searchRequestId){state.rows=data.results||[];state.hasMore=!!data.has_more;}
  }catch(e){
-  if(current===state.searchRequestId){state.rows=[];notice(e.message,true);}
+  if(current===state.searchRequestId){state.rows=[];state.hasMore=false;notice(e.message,true);}
  }finally{
   if(current===state.searchRequestId){state.loading=false;render();}
  }
 }
 function setTab(fav){
- state.favorites=fav;
+ state.favorites=fav;state.page=0;
  $("allTab").classList.toggle("selected",!fav);
  $("favTab").classList.toggle("selected",fav);
  $("allTab").setAttribute("aria-selected",String(!fav));
@@ -363,8 +370,19 @@ function bind(){
  $("playerForward").onclick=()=>skipAudio(15);
  $("sampleAudio").onloadedmetadata=finishInitialSeek;
  $("sampleAudio").onerror=()=>{if(state.playing)$("playerStatus").textContent="Kunne ikke afspille MP3 her. Åbn originalen i stedet.";};
- $("searchForm").onsubmit=e=>{e.preventDefault();search();};
- let timer;$("speaker").oninput=()=>{clearTimeout(timer);timer=setTimeout(search,350);};
+ $("searchForm").onsubmit=e=>{e.preventDefault();search(true);};
+ let timer;$("speaker").oninput=()=>{clearTimeout(timer);timer=setTimeout(()=>search(true),350);};
+ for(const id of ["yearFrom","yearTo","sortResults"]){$(id).addEventListener("change",()=>search(true));}
+ const partySummary=()=>{$("partySummary").textContent="PARTI: "+([...document.querySelectorAll('input[name="party"]:checked')].map(x=>x.value).join(", ")||"ALLE");};
+ for(const input of document.querySelectorAll('input[name="party"]'))input.addEventListener("change",()=>{partySummary();search(true);});
+ $("resetFilters").onclick=()=>{
+  $("speaker").value="";$("yearFrom").value="2010";$("yearTo").value="2026";
+  $("sortResults").value="newest";
+  for(const input of document.querySelectorAll('input[name="party"]'))input.checked=false;
+  partySummary();search(true);
+ };
+ $("prevPage").onclick=()=>{if(state.page>0){state.page--;search();}};
+ $("nextPage").onclick=()=>{if(state.hasMore){state.page++;search();}};
  $("allTab").onclick=()=>setTab(false);$("favTab").onclick=()=>setTab(true);
  $("importBtn").onclick=async()=>{
   const out=$("importState");out.textContent="Henter PDF fra Folketingstidende…";
