@@ -1,13 +1,16 @@
 # Political Sample Finder
 
-Find citater fra **rigtige folketingsreferater**, se taler og klokkeslæt, og åbn den mulige originaloptagelse som MP3. Ingen opdigtede søgeresultater. Der er nu en integreret lydklipper, der eksporterer 16-bit WAV.
+Søg i **rigtige folketingsreferater med verificeret original MP3**. Teksten er søgenøglen; lyden er produktet. Intet søgeresultat vises uden en kontrolleret lydkobling. Original lyd streames kun ved afspilning og kan klippes til 16-bit WAV.
 
-## Cloudflare-udgaven v0.3
+## Cloudflare-udgaven v0.4
 
-- Worker API + D1-database til referater, taleindlæg, podcastlinks og favoritter.
-- PDF-læsning i browseren via PDF.js, med tekstsøgning og filter på politiker.
-- Officielt podcast-RSS og afspiller med *omtrentlig* tidsposition, der kan justeres.
-- Koden er testet for syntaks, dato/RSS og enkle talersektioner. **Live-import og afspilning er endnu ikke testet i Cloudflare.**
+- Worker API + D1 FTS5 til verificerede taler med lyd. Kun poster knyttet til `meeting_audio` returneres.
+- Søgning med serverbaseret årsspænd, flervalg af partier, talernavn, dato- og relevanssortering samt **25 fund ad gangen**.
+- Folketingets **officielle XML** hentes fra `oda.ft.dk` via en begrænset GitHub Actions-kørsel. Kun møder med matchende, HTTP HEAD-verificeret original Kaltura-MP3 og **færdigredigerede referater** accepteres.
+- GitHub committer små JSON-mødefiler i `public/archive/xml/`. Cloudflare Cron importerer dem i 60-talebatches og opdaterer FTS5.
+- Ældre PDF-arkivfiler bevares, men importeres ikke længere automatisk. Deres taler vises kun, hvis en original MP3 er verificeret og koblet til møde-id.
+- MP3 hentes i browseren **først når brugeren afspiller eller klipper**. Serveren bruger en låst byte-range proxy. Ingen videobehandling.
+- GitHub-testene er grønne. Verificér særskilt **Cloudflare-deployment, den faktiske D1-import og brugerfladens liveadfærd**.
 
 ## Installation kun i browser (ingen Terminal)
 
@@ -20,15 +23,18 @@ Find citater fra **rigtige folketingsreferater**, se taler og klokkeslæt, og å
 7. Åbn den nye workers.dev-adresse, vælg **Indlæs data** og skriv adgangskoden. Prøv samling **20251**, møde **41**. Hvis server-fetch af PDF fejler, download original-PDF'en og vælg **Indlæs valgt PDF**.
 8. Vælg **Opdatér lydindeks**, feed **Folketingssalen**, og søg f.eks. efter **ansvar**.
 
-## Automatisk arkivudvidelse (oktober 2026)
+## Automatisk XML + verificeret MP3 (oktober 2026)
 
-- GitHub Actions: `.github/workflows/backfill-archive.yml` scanner de officielle referat-PDF'er dagligt kl. 04:17 UTC. Workflowet kan også startes manuelt i Actions.
-- `scripts/backfill_archive.py` henter højst **12 nye møder** og undersøger højst **36 kilder** per kørsel. Den udfylder huller i eksisterende samlinger og arbejder tilbage mod 2013. Et aktuelt kommende møde afprøves højst en gang om dagen.
-- Hver fil valideres: rigtig PDF, dato svarer til samlingen, mindst ét taleafsnit med taler og klokkeslæt, størrelse under Cloudflares filgrænse. Mislykkede kilder markeres til senere forsøg — ingen opdigtede data.
-- Lokal validering: `python -m pip install PyMuPDF==1.26.7 && python scripts/test_backfill.py`.
-- Arkivudvidelsen standser ved 750 MiB statiske JSON-arkivfiler, indtil en anden lagringsstrategi er besluttet.
-- Når de genererede filer **er deployet** til Cloudflare, indlæser Workerens planlagte Cron dem gradvist i D1. Kontroller både GitHub Actions-loggen, Cloudflare-deployment og `/api/archive/status`. GitHub Actions-commits med `GITHUB_TOKEN` udløser ikke nødvendigvis alle eksterne CI/CD-automatiseringer.
-- Daglig D1-kvote på Free kan fortsat begrænse, hvor hurtigt møderne bliver søgbare. En GitHub-fil er **ikke det samme** som et allerede indekseret møde.
+1. Workflow: `.github/workflows/build-xml-audio-archive.yml`, dagligt kl. 04:43 UTC eller manuelt fra GitHub Actions. Script: `scripts/build_xml_audio_archive.py`.
+2. Læs `src/audio-index.json` (officielle RSS-enclosures). For hvert møde kontrolleres samling, dato, mødenummer og et **direkte MP3-link** via HTTP HEAD med `audio/mpeg`. **Ingen video**.
+3. Hent `<samling>_M<møde>_helemoedet.xml` via FTP `oda.ft.dk/ODAXML/Referat/samling/` og kontrollér både metadata og tekst. Møder med **»Talen er under udarbejdelse«** eller **»afventer korrektur«** accepteres først, når referatet er færdigt.
+4. Gem højst 3 fuldførte møder per kørsel i `public/archive/xml/` og opdater den versionsmærkede manifestfil.
+5. Når disse assets **er deployet**, indlæser Cloudflare Workerens Cron højst tre batches à 60 taleafsnit pr. kørsel. En færdig import registrerer MP3-link og tidsstempler sammen med mødet; den vises først ved `status=ready`.
+6. Separat verificerer `src/audio-registry.js` op til 8 af eksisterende officielle MP3-links pr. Cron-kørsel for at bevare relevante PDF-indekserede taler med lyd.
+7. Den gamle PDF-tilbagefyldning i `.github/workflows/backfill-archive.yml` **kører ikke automatisk** længere. Der er alene en manuel nødudgang til ældre data.
+8. Kontrollér `/api/stats`, `/api/archive/status`, GitHub Actions-loggen og det faktiske Cloudflare-deployment. GitHub Actions-commits med `GITHUB_TOKEN` behøver ikke automatisk udløse alle eksterne CI/CD-processer.
+
+**Dækningsgrænse:** Det offentligt verificerede MP3-feed rækker pt. tilbage til 8. november 2024. Ældre lyd kan først tilføjes, når en reel afspillelig original-MP3 er dokumenteret.
 
 ## Lydklipper / TD-2000
 
@@ -45,7 +51,7 @@ Lydens kilde er Folketinget. Rettigheder til offentliggørelse og musikalsk genb
 ## Vigtige begrænsninger
 
 - Referater indeholder klokkeslæt ved **starten af taleindlæg**, ikke tidskoder for hvert enkelt ord.
-- MP3-links matches foreløbigt på **mødedato**, ikke på verificeret møde-ID. Kontroller altid lydfilen.
+- Nye XML-møder kræver samling, mødenummer, dato og en særskilt verificeret MP3-kilde. Eksisterende RSS-registreringer forbindes via match på dato **og mødenummer** og kontrolleres med HEAD.
 - En lydoptagelse starter ikke nødvendigvis ved det første referatklokkeslæt; afspillerens tidsposition er derfor kun et overslag.
 - RSS-feedets historiske dækning er ikke komplet verificeret.
 - PDF-parseren i webversionen bruger PDF.js og kan udtrække et andet antal taleindlæg end den lokale Python-version. Hvis udtrækket fejler, skal det rettes på rigtige kildeeksempler.
