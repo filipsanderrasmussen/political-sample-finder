@@ -37,6 +37,28 @@
       <span id="stats" class="sr-only" aria-live="polite">Indlæser arkivstatus</span>
       <div class="search-options">
         <input class="speakerfilter" id="speaker" type="search" placeholder="Filtrér på taler (valgfrit)" aria-label="Filtrér på taler" autocomplete="off">
+        <div class="search-filters" aria-label="Filtrér søgeresultater">
+          <div class="filter-field"><label for="yearFrom">FRA ÅR</label><input id="yearFrom" type="number" min="2010" max="2026" value="2010" inputmode="numeric"></div>
+          <div class="filter-field"><label for="yearTo">TIL ÅR</label><input id="yearTo" type="number" min="2010" max="2026" value="2026" inputmode="numeric"></div>
+          <div class="filter-field"><label for="sortResults">SORTERING</label><select id="sortResults"><option value="newest">Nyeste først</option><option value="oldest">Ældste først</option><option value="relevance">Relevans</option></select></div>
+          <details class="party-picker" id="partyPicker"><summary id="partySummary">PARTI: ALLE</summary>
+            <fieldset class="party-grid" aria-label="Vælg flere partier">
+              <label><input type="checkbox" name="party" value="S"> S</label>
+              <label><input type="checkbox" name="party" value="V"> V</label>
+              <label><input type="checkbox" name="party" value="M"> M</label>
+              <label><input type="checkbox" name="party" value="SF"> SF</label>
+              <label><input type="checkbox" name="party" value="EL"> Ø</label>
+              <label><input type="checkbox" name="party" value="RV"> RV</label>
+              <label><input type="checkbox" name="party" value="LA"> LA</label>
+              <label><input type="checkbox" name="party" value="DF"> DF</label>
+              <label><input type="checkbox" name="party" value="DD"> DD</label>
+              <label><input type="checkbox" name="party" value="KF"> KF</label>
+              <label><input type="checkbox" name="party" value="ALT"> Å</label>
+              <label><input type="checkbox" name="party" value="NB"> NB</label>
+            </fieldset>
+          </details>
+          <button id="resetFilters" type="button" class="button outline">NULSTIL FILTRE</button>
+        </div>
       </div>
     </form>
     <section class="results-head" aria-label="Søgeresultater">
@@ -45,6 +67,11 @@
     </section>
     <div id="notification" role="status" class="notification hidden"></div>
     <div id="results" aria-live="polite"></div>
+    <nav id="searchPages" class="search-pages hidden" aria-label="Sider med søgeresultater">
+      <button id="prevPage" type="button" class="button outline">← FORRIGE</button>
+      <span id="pageLabel" aria-live="polite">SIDE 1</span>
+      <button id="nextPage" type="button" class="button outline">NÆSTE →</button>
+    </nav>
     <div id="empty" class="empty"><span class="empty-symbol" aria-hidden="true">&gt;</span><h2>AFVENTER SØGNING</h2><p>Indtast en søgestreng ovenfor.</p><button class="button outline" type="button" id="emptyImport">[ ARKIVSTATUS ]</button></div>
     <footer><span>TALEDATABASE 2000 // EDB-VÆRKTØJ TIL LYDSØGNING I FOLKETINGETS TALER</span><span>KILDER: FOLKETINGET</span><span>VEJLEDENDE TIDSPOSITIONER</span></footer>
   </main>
@@ -86,8 +113,8 @@
   <div class="uploadrow"><select id="feed"><option value="Salen">Folketingssalen</option><option value="Alle">Alle møder</option></select><button id="rssBtn" class="button outline" type="button">Hent lydlinks</button></div>
   <p id="rssState" class="feedback" aria-live="polite"></p>
   <hr><div class="eyebrow">03 / GENINDEKSERING</div>
-  <p class="field-help">Indekseringen kører normalt af sig selv. Denne knap kan bruges til at fremskynde den.</p>
-  <button id="syncArchiveBtn" class="button outline full" type="button">Indeksér nu</button>
+  <p class="field-help">Kun officielle XML-referater med verificeret MP3 indekseres her.</p>
+  <button id="syncArchiveBtn" class="button outline full" type="button">Indeksér lydverificeret XML</button>
  </details>
  <hr><p class="legal">Folketingets lyd er omfattet af brugsbetingelser. Klipning og offentliggørelse skal vurderes særskilt.</p>
 </div></dialog>
