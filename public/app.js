@@ -58,11 +58,17 @@ function seconds(row,p){const a=mins(row.clock),b=mins(anchor(p.mp3_url)||row.fi
 function render(){
  const meet=Number(state.stats?.verified_audio_meetings||0);
  const speech=Number(state.stats?.audio_speeches||0);
- const audio=Number(state.stats?.verified_audio_meetings||0);
+ const first=state.stats?.searchable_first_date||null;
+ const last=state.stats?.searchable_last_date||null;
+ const span=first&&last?(first.slice(0,4)===last.slice(0,4)?first.slice(0,4):first.slice(0,4)+"–"+last.slice(0,4)):"—";
+ const precise=first&&last?dateLabel(first)+" – "+dateLabel(last):"endnu ingen daterede møder";
  $("statMeetings").textContent=meet.toLocaleString("da-DK");
  $("statSpeeches").textContent=speech.toLocaleString("da-DK");
- $("statAudio").textContent=audio.toLocaleString("da-DK");
- $("stats").textContent=meet+" søgbare møder, "+speech.toLocaleString("da-DK")+" taleafsnit, "+audio+" møder med lyd";
+ $("statPeriod").textContent=span;
+ $("archiveCoverage").textContent=meet
+  ?"SØGBART NU: "+precise+" · KUN MØDER MED ORIGINAL MP3 · IKKE KOMPLET DÆKNING AF PERIODEN"
+  :"INGEN LYDVERIFICEREDE MØDER ER INDEKSERET ENDNU";
+ $("stats").textContent=meet+" møder i Folketingets sal, "+speech.toLocaleString("da-DK")+" registrerede taleindlæg. Dækning: "+precise+"; ikke alle møder i perioden.";
  $("count").textContent=state.loading?"SØGER":((state.q.trim()||state.speaker.trim()||state.favorites)?String(state.rows.length).padStart(2,"0")+" VIST · SIDE "+(state.page+1)+(state.hasMore?" · FLERE →":""):"KLAR TIL SØGNING");
  const pages=$("searchPages");pages.classList.toggle("hidden",!(state.page>0||state.hasMore));
  $("prevPage").disabled=state.page===0;$("nextPage").disabled=!state.hasMore;
