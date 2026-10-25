@@ -1,8 +1,10 @@
 {
   "retry_after": {
-    "20261_M10": "2026-10-26T11:25:10.388181+00:00"
+    "20261_M10": "2026-10-26T11:25:10.388181+00:00",
+    "20241_M28": "2026-11-24T11:26:52.873362+00:00"
   },
   "errors": {
-    "20261_M10": "HTTP Error 404: Not Found"
+    "20261_M10": "HTTP Error 404: Not Found",
+    "20241_M28": "PDF mangler kontrollerbar dato eller klokkeslættede taleafsnit"
   }
 }
