@@ -28,9 +28,9 @@ def collect(buf,max_bytes=MAX_BYTES):
 
 def analyze(source,data):
     # Official Microsoft FTP exports may be UTF-16 rather than UTF-8.
-    if data[:2] in (b"\\xff\\xfe", b"\\xfe\\xff"):
+    if data[:2] in (b"\xff\xfe", b"\xfe\xff"):
         decoded=data.decode("utf-16")
-    elif data[:3] == b"\\xef\\xbb\\xbf":
+    elif data[:3] == b"\xef\xbb\xbf":
         decoded=data.decode("utf-8-sig")
     else:
         decoded=data.decode("utf-8")
