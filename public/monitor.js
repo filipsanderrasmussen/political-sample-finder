@@ -5,16 +5,21 @@ import {preloadBootAudio} from "./boot-audio.js";
 // preloaded before the switch is pressed; no synthetic audio is generated.
 // Fictional TD-2000 ROM/serial diagnostics inspired by period text terminals.
 // This is visual theatre, not a claim that a genuine 1987 computer is present.
-export const BOOT_DURATION_MS=3650;
+export const BOOT_DURATION_MS=9000;
 export const POWER_DOWN_MS=950;
 export const BOOT_STEPS=Object.freeze([
   {at:260, text:"TD-2000 TERMINAL   ROM V1.7"},
-  {at:760, text:"64 KB RAM ............... OK"},
-  {at:1260,text:"TEGNGENERATOR .......... OK"},
-  {at:1740,text:"TASTATUR ............... OK"},
-  {at:2280,text:"SERIEL PORT A    9600 8N1"},
-  {at:2810,text:"FORBINDELSE ............ OK"},
-  {at:3220,text:"SYSTEM KLAR"}
+  {at:940, text:"64 KB RAM ............... OK"},
+  {at:1630, text:"TEGNGENERATOR .......... OK"},
+  {at:2320, text:"TASTATUR ............... OK"},
+  {at:3000, text:"SERIEL PORT A    9600 8N1"},
+  {at:3700, text:"SPOOLER INITIALISERES .. OK"},
+  {at:4510, text:"SPOOL-BUFFER ......... 16 KB"},
+  {at:5210, text:"SPOOLKØ ............ 0 JOBS"},
+  {at:6080, text:"ARKIVDREV .............. OK"},
+  {at:6870, text:"FORBINDELSE ............ OK"},
+  {at:7800, text:"SØGEINDEKS ............ KLAR"},
+  {at:8530, text:"SYSTEM KLAR"}
 ]);
 const SESSION_KEY="td2000.monitor.booted";
 
