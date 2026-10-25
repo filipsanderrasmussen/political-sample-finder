@@ -65,6 +65,9 @@ function render(){
  $("statMeetings").textContent=meet.toLocaleString("da-DK");
  $("statSpeeches").textContent=speech.toLocaleString("da-DK");
  $("statPeriod").textContent=span;
+ // Years are optional filters; placeholders reflect indexed source dates.
+ $("yearFrom").placeholder=first?.slice(0,4)||"År";
+ $("yearTo").placeholder=last?.slice(0,4)||"År";
  $("archiveCoverage").textContent=meet
   ?"SØGBART NU: "+precise+" · KUN MØDER MED ORIGINAL MP3 · IKKE KOMPLET DÆKNING AF PERIODEN"
   :"INGEN LYDVERIFICEREDE MØDER ER INDEKSERET ENDNU";
@@ -379,10 +382,15 @@ function bind(){
  $("searchForm").onsubmit=e=>{e.preventDefault();search(true);};
  let timer;$("speaker").oninput=()=>{clearTimeout(timer);timer=setTimeout(()=>search(true),350);};
  for(const id of ["yearFrom","yearTo","sortResults"]){$(id).addEventListener("change",()=>search(true));}
- const partySummary=()=>{$("partySummary").textContent="PARTI: "+([...document.querySelectorAll('input[name="party"]:checked')].map(x=>x.value).join(", ")||"ALLE");};
+ const partySummary=()=>{
+  const selected=[...document.querySelectorAll('input[name="party"]:checked')].map(x=>x.value);
+  const summary=$("partySummary");
+  summary.textContent=selected.length>3?selected.length+" valgt":selected.join(", ")||"Alle partier";
+  summary.title=selected.length?selected.join(", "):"Alle partier";
+ };
  for(const input of document.querySelectorAll('input[name="party"]'))input.addEventListener("change",()=>{partySummary();search(true);});
  $("resetFilters").onclick=()=>{
-  $("speaker").value="";$("yearFrom").value="2010";$("yearTo").value="2026";
+  $("speaker").value="";$("yearFrom").value="";$("yearTo").value="";
   $("sortResults").value="newest";
   for(const input of document.querySelectorAll('input[name="party"]'))input.checked=false;
   partySummary();search(true);
