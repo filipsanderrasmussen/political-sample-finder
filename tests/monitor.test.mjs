@@ -29,7 +29,7 @@ function fakeEnvironment({remembered=false,reduced=false}={}){
      click(){this.handlers.click?.()}
    };
  }
- for(const x of ["monitorShell","monitorScreen","terminalFrame","monitorPower","monitorPowerLabel","monitorOffline","monitorBootLines"])elements.set(x,element());
+ for(const x of ["monitorShell","monitorScreen","terminalFrame","monitorPower","monitorOffline","monitorBootLines"])elements.set(x,element());
  globalThis.document={
    getElementById(id){return elements.get(id)},
    createElement(){return element()}
@@ -67,6 +67,13 @@ test("real-world monitor is edge-to-edge with a physical switch; dialogs remain 
   assert.match(html,/<div class="monitor-offline" id="monitorOffline" aria-hidden="true"><\/div>/);
   assert.doesNotMatch(html,/SKÆRM SLUKKET|Tryk på tændknappen under skærmen/);
   assert.match(html,/id="monitorPower"[^>]*aria-label="Tænd skærmen"/);
+  assert.match(html,/<span class="monitor-power-icon" aria-hidden="true">⏻<\/span>/);
+  assert.doesNotMatch(html,/id="monitorPowerLabel"/);
+  assert.doesNotMatch(html,/monitor-power-button[\s\S]{0,150}>TÆND<\/span>/);
+  assert.match(css,/\.monitor-power-led\{[\s\S]*?background:#050505/);
+  assert.match(css,/\.monitor-shell\[data-power="on"\] \.monitor-power-led/);
+  assert.match(css,/\.monitor-power-icon\{font-size:26px/);
+  assert.doesNotMatch(readFileSync("public/monitor.js","utf8"),/power\.focus\(\{preventScroll:true\}\)/);
   assert.match(html,/id="terminalFrame" inert aria-hidden="true"/);
   assert.match(html,/id="playerDialog"/);
   assert.match(html,/id="importDialog"/);
@@ -97,7 +104,7 @@ test("power switch boots on user action, stores session, and turns off safely",(
     const monitor=initMonitor({onReady:()=>ready++,onShutdown:()=>shutdown++});
     const power=env.elements.get("monitorPower");
     assert.equal(monitor.state,"off");
-    assert.equal(power.focused,true);
+    assert.notEqual(power.focused,true,"A powered-off button must not have a glowing focus ring");
     assert.equal(ready,0);
     assert.equal(env.elements.get("terminalFrame").inert,true);
     power.click();
@@ -121,7 +128,7 @@ test("power switch boots on user action, stores session, and turns off safely",(
     assert.equal(ready,1);
     assert.equal(env.storage.get("td2000.monitor.booted"),"1");
     assert.equal(env.elements.get("terminalFrame").inert,false);
-    assert.equal(env.elements.get("monitorPowerLabel").textContent,"SLUK");
+    assert.equal(power.attributes["aria-label"],"Sluk skærmen");
     power.click();
     assert.equal(monitor.state,"powering-down","Text must fade before glass goes black");
     assert.equal(shutdown,1,"Playing audio stops immediately at switch-off");
