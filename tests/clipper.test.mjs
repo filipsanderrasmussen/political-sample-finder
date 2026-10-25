@@ -22,7 +22,10 @@ test("precise timecode round trips to the nearest millisecond",()=>{
 
 test("clip selection enforces bounds and short, useful sample lengths",()=>{
   assert.equal(MAX_CLIP_SECONDS,30);
-  assert.deepEqual(validateClip(120.01,128.51,200),{start:120.01,end:128.51,seconds:8.5});
+  const clip=validateClip(120.01,128.51,200);
+  assert.equal(clip.start,120.01);
+  assert.equal(clip.end,128.51);
+  assert.ok(Math.abs(clip.seconds-8.5)<1e-10);
   assert.throws(()=>validateClip(-1,5),/gyldigt/);
   assert.throws(()=>validateClip(5,5),/gyldigt/);
   assert.throws(()=>validateClip(5,4),/gyldigt/);
