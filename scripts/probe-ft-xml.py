@@ -27,11 +27,18 @@ def collect(buf,max_bytes=MAX_BYTES):
     return receive
 
 def analyze(source,data):
-    if not data.lstrip().startswith((b"<?xml",b"<")):
-        raise ValueError("Response does not appear to be XML")
-    if b"<!DOCTYPE" in data.upper() or b"<!ENTITY" in data.upper():
+    # Official Microsoft FTP exports may be UTF-16 rather than UTF-8.
+    if data[:2] in (b"\\xff\\xfe", b"\\xfe\\xff"):
+        decoded=data.decode("utf-16")
+    elif data[:3] == b"\\xef\\xbb\\xbf":
+        decoded=data.decode("utf-8-sig")
+    else:
+        decoded=data.decode("utf-8")
+    if "<!DOCTYPE" in decoded.upper() or "<!ENTITY" in decoded.upper():
         raise ValueError("DTD/entity found: reject external entity expansion")
-    root=ET.fromstring(data)
+    if not decoded.lstrip().startswith("<"):
+        raise ValueError("XML does not start with '<', first bytes "+repr(data[:32]))
+    root=ET.fromstring(decoded)
     tags=collections.Counter(local(x.tag) for x in root.iter())
     values=[(local(x.tag), (x.text or "").strip()) for x in root.iter() if x.text and x.text.strip()]
     patterns=("tale","tid","klokke","navn","person","aktor","ordfoer","speaker","afsnit","tekst")
