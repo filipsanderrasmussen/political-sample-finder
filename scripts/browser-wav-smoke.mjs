@@ -16,12 +16,27 @@ try{
  page.on("pageerror",e=>errors.push(String(e).slice(0,250)));
  const reply=await page.goto(APP,{waitUntil:"domcontentloaded",timeout:40000});
  report.http=reply?.status();
+ report.powerOff=await page.evaluate(()=>{
+   const shell=document.getElementById("monitorShell");
+   const button=document.getElementById("monitorPower");
+   const led=getComputedStyle(document.querySelector(".monitor-power-led"));
+   return {state:shell.dataset.power,symbol:button.textContent.trim(),
+           focused:document.activeElement===button,
+           ledBackground:led.backgroundColor,ledShadow:led.boxShadow,
+           accessibleLabel:button.getAttribute("aria-label")};
+ });
  await page.locator("#monitorPower").click();
  await page.waitForFunction(()=>{
    const counter=document.querySelector("#statMeetings")?.textContent?.trim()||"";
    const coverage=document.querySelector("#archiveCoverage")?.textContent||"";
    return /^\d/.test(counter)&&coverage.includes("SØGBART NU");
  },null,{timeout:22000});
+ report.powerOn=await page.evaluate(()=>{
+   const led=getComputedStyle(document.querySelector(".monitor-power-led"));
+   return {state:document.getElementById("monitorShell").dataset.power,
+           ledBackground:led.backgroundColor,
+           symbol:document.getElementById("monitorPower").textContent.trim()};
+ });
  report.archiveUi=await page.evaluate(async ()=>{
    const response=await fetch("/api/stats");
    const stats=await response.json();
@@ -85,7 +100,11 @@ try{
    &&report.archiveUi.meetings===report.archiveUi.meetingCount.toLocaleString("da-DK")
    &&report.archiveUi.speech_turns===report.archiveUi.speechCount.toLocaleString("da-DK")
    &&report.filtersDesktop.aligned&&report.filtersDesktop.sameHeight
-   &&report.filtersMobile.withinFrame&&report.filtersMobile.responsiveOrder;
+   &&report.filtersMobile.withinFrame&&report.filtersMobile.responsiveOrder
+   &&report.powerOff.state==="off"&&report.powerOff.symbol==="⏻"&&!report.powerOff.focused
+   &&report.powerOff.ledBackground==="rgb(5, 5, 5)"
+   &&report.powerOn.state==="on"&&report.powerOn.symbol==="⏻"
+   &&report.powerOn.ledBackground==="rgb(74, 255, 143)";
  await context.close();
 }catch(e){report.error=String(e).slice(0,900)}
 finally{await browser?.close().catch(()=>{});}
