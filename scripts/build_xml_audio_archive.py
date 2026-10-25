@@ -12,6 +12,30 @@ MANIFEST=OUT/"manifest.json"
 VALID=re.compile(r"^https://cdnapi\.kaltura\.com/p/2158211/sp/0/playManifest/entryId/1_[a-z0-9]+/protocol/http/flavorParamIds/0/format/url/\d{2}-\d{2}-\d{4}_\d{2}-\d{2}_salen\.mp3$",re.I)
 LIMIT_XML=12_000_000
 PARTY=re.compile(r"^[A-ZÆØÅ]{1,6}$")
+
+def session_candidates(day):
+    """Opening of the regular Folketing session is first Tuesday in October.
+    September and early October therefore belong to the PREVIOUS year's session.
+    Include extraordinary (2) session only when the ordinary session is absent.
+    """
+    when=dt.date.fromisoformat(day)
+    first=dt.date(when.year,10,1)
+    opening=first+dt.timedelta(days=(1-first.weekday())%7)
+    base=when.year if when>=opening else when.year-1
+    return [f"{base}1",f"{base}2"]
+
+def unique_primary_audio(records):
+    """Do not waste XML requests on repeated RSS enclosures or sign-language copies."""
+    ordered=sorted(records,key=lambda item:(
+        item.get("date",""),item.get("meeting_no",0),
+        "Møde i salen:" in item.get("title","")
+    ),reverse=True)
+    seen=set()
+    for entry in ordered:
+        key=(entry.get("date"),entry.get("meeting_no"))
+        if key in seen:continue
+        seen.add(key)
+        yield entry
 def tag(element):return element.tag.rsplit("}",1)[-1]
 def first(element,name):
     return next(((x.text or "").strip() for x in element.iter() if tag(x)==name and x.text), "")
@@ -63,20 +87,20 @@ def main():
     p.add_argument("--max-new",type=int,default=3)
     p.add_argument("--max-checks",type=int,default=12)
     opt=p.parse_args()
-    if not (1<=opt.max_new<=8 and 1<=opt.max_checks<=30):p.error("Unsafe batch size")
+    if not (1<=opt.max_new<=10 and 1<=opt.max_checks<=40):p.error("Unsafe batch size")
     OUT.mkdir(parents=True,exist_ok=True)
     manifest=json.loads(MANIFEST.read_text("utf-8")) if MANIFEST.exists() else []
     existing={x["id"] for x in manifest}
     records=json.loads(INDEX.read_text("utf-8"))
     print("Official MP3 entries:",len(records),"XML indexed:",len(existing),flush=True)
     # Scan newest first, then extend backwards across verified feed coverage.
-    records=sorted(records,key=lambda x:(x.get("date",""),x.get("meeting_no",0)),reverse=True)
+    records=list(unique_primary_audio(records))
     cursor_path=ROOT/"scripts/xml-audio-position.json"
     cursor=json.loads(cursor_path.read_text("utf-8")) if cursor_path.exists() else {"next":0}
     start=(int(cursor.get("next",0))%len(records)) if records else 0
     rotated=records[start:]+records[:start]
     checks=new=scanned=0
-    ftp=None;current=None
+    ftp=None
     try:
         for a in rotated:
             if new>=opt.max_new or checks>=opt.max_checks:break
@@ -86,15 +110,13 @@ def main():
             url=a.get("mp3_url","")
             if not re.fullmatch(r"20\d\d-\d\d-\d\d",date) or not isinstance(number,int) or not VALID.fullmatch(url):
                 continue
-            year=int(date[:4])
-            samling=(str(year-1)+"1" if int(date[5:7])<9 else str(year)+"1")
-            # Danish Folketing sessions may include extraordinary 2-sessions.
-            possible=[samling,str(year)+"2",str(year-1)+"2"]
+            # Use actual session opening, not just October 1.
+            # September 2026 and 1 Oct 2026 are in 20251, not 20261.
+            try:possible=session_candidates(date)
+            except ValueError:continue
             if ftp is None:
                 ftp=ftplib.FTP("oda.ft.dk",timeout=18)
                 ftp.login("anonymous","taledatabase@example.invalid")
-            if current is None:
-                current=set(ftp.nlst("/ODAXML/Referat/samling"))
             for session in possible:
                 mid=f"{session}_M{number}"
                 if mid in existing:break
