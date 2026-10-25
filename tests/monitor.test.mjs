@@ -179,11 +179,12 @@ test("the supplied original MP3 is preloaded with no synthetic audio",()=>{
   assert.ok(html.includes('data-boot-sound-src="/boot.mp3"'));
   assert.ok(html.includes('<link rel="preload" as="audio" href="/boot.mp3" type="audio/mpeg">'));
   assert.ok(monitor.includes("schedule(ready,BOOT_DURATION_MS)"));
-  assert.equal(BOOT_DURATION_MS,12900);
+  assert.equal(BOOT_DURATION_MS,3650);
+  assert.ok(BOOT_DURATION_MS < 12900, "The screen becomes interactive before the 12.9-second sound finishes");
 });
 
 test("startup diagnostic text resembles a serial-ROM terminal, not a marketing splash",()=>{
-  assert.equal(BOOT_STEPS.length,10);
+  assert.equal(BOOT_STEPS.length,7);
   assert.equal(BOOT_STEPS.at(-1).text,"SYSTEM KLAR");
   assert.equal(BOOT_STEPS[0].text,"TD-2000 TERMINAL   ROM V1.7");
   assert.ok(BOOT_STEPS.some(x=>x.text.includes("64 KB RAM")));
@@ -267,4 +268,53 @@ test("actual uploaded boot.mp3 is bundled as a complete original recording",()=>
   const bytes=readFileSync("public/boot.mp3");
   assert.equal(bytes.length,157215,"Original MP3 is preserved byte-for-byte in the repo");
   assert.equal(bytes.subarray(0,3).toString("ascii"),"ID3");
+});
+
+test("power-off recording is preloaded and plays on switch-off while startup audio survives boot",()=>{
+  const env=fakeEnvironment();
+  const previousAudio=globalThis.Audio;
+  const calls=[];
+  try{
+    const shell=env.elements.get("monitorShell");
+    shell.dataset.bootSoundSrc="/boot.mp3";
+    shell.dataset.powerOffSoundSrc="/turnoff.mp3";
+    globalThis.Audio=class{
+      constructor(){this.src="";this.currentTime=0}
+      load(){calls.push(this.src+":load")}
+      play(){calls.push(this.src+":play");return Promise.resolve()}
+      pause(){calls.push(this.src+":pause")}
+    };
+    const monitor=initMonitor({});
+    assert.deepEqual(calls,["/boot.mp3:load","/turnoff.mp3:load"]);
+    const btn=env.elements.get("monitorPower");
+    btn.click();
+    assert.equal(monitor.state,"booting");
+    assert.ok(calls.includes("/boot.mp3:play"));
+    assert.ok(!calls.includes("/turnoff.mp3:play"));
+    env.advanceTo(BOOT_DURATION_MS);
+    assert.equal(monitor.state,"on");
+    assert.equal(calls.filter(x=>x==="/boot.mp3:pause").length,1,
+      "Startup sound must NOT be stopped when the interface becomes interactive");
+    btn.click();
+    assert.equal(monitor.state,"powering-down");
+    assert.equal(calls.at(-1),"/turnoff.mp3:play","Switch-off plays the recorded clonk immediately");
+    assert.equal(calls.filter(x=>x==="/boot.mp3:pause").length,2);
+  }finally{
+    if(previousAudio===undefined)delete globalThis.Audio;
+    else globalThis.Audio=previousAudio;
+    env.restore();
+  }
+});
+
+test("larger status lamp stands alone without power caption",()=>{
+  assert.doesNotMatch(html,/>STRØM<|monitor-power-caption/);
+  assert.match(html,/data-power-off-sound-src="\/turnoff\.mp3"/);
+  assert.match(html,/rel="preload" as="audio" href="\/turnoff\.mp3"/);
+  assert.match(css,/\.monitor-power-led\{[\s\S]*?width:13px;height:13px/);
+});
+
+test("uploaded power-off recording is included as playable MP3",()=>{
+  const audio=readFileSync("public/turnoff.mp3");
+  assert.equal(audio.length,2168);
+  assert.equal(audio.subarray(0,3).toString("ascii"),"ID3");
 });
