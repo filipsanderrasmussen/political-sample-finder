@@ -1,0 +1,30 @@
+name: Verify live MP3-backed search
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/test-production-audio.py'
+      - '.github/workflows/test-production-audio.yml'
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate test syntax
+        run: python -m py_compile scripts/test-production-audio.py
+      - name: Inspect live FTS, filtering, pages and MP3 byte-range
+        run: python -u scripts/test-production-audio.py
+      - name: Save report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-production-audio-smoke
+          path: production-audio-smoke.json
+          if-no-files-found: warn
