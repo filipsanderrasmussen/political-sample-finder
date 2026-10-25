@@ -307,9 +307,9 @@ async function endpoint(request,env,url) {
       env.DB.prepare("SELECT COUNT(*) n FROM podcasts"),
       env.DB.prepare("SELECT COUNT(*) n FROM podcasts WHERE date IS NOT NULL"),
       env.DB.prepare("SELECT id,title,date,source_url,speech_count FROM meetings WHERE status='ready' ORDER BY imported_at DESC LIMIT 15"),
-      env.DB.prepare("SELECT COUNT(*) n FROM meeting_audio a JOIN meetings m ON m.id=a.meeting_id WHERE m.status='ready'"),
-      env.DB.prepare("SELECT COALESCE(SUM(m.speech_count),0) n FROM meeting_audio a JOIN meetings m ON m.id=a.meeting_id WHERE m.status='ready'"),
-      env.DB.prepare("SELECT MIN(m.date) earliest,MAX(m.date) latest FROM meeting_audio a JOIN meetings m ON m.id=a.meeting_id WHERE m.status='ready' AND m.date IS NOT NULL")
+      env.DB.prepare("SELECT COUNT(*) n FROM meeting_audio a JOIN meetings m ON m.id=a.meeting_id WHERE m.status='ready' AND NOT (m.samling='20251' AND m.date >= '2026-04-10' AND m.date < '2026-10-06')"),
+      env.DB.prepare("SELECT COALESCE(SUM(m.speech_count),0) n FROM meeting_audio a JOIN meetings m ON m.id=a.meeting_id WHERE m.status='ready' AND NOT (m.samling='20251' AND m.date >= '2026-04-10' AND m.date < '2026-10-06')"),
+      env.DB.prepare("SELECT MIN(m.date) earliest,MAX(m.date) latest FROM meeting_audio a JOIN meetings m ON m.id=a.meeting_id WHERE m.status='ready' AND m.date IS NOT NULL AND NOT (m.samling='20251' AND m.date >= '2026-04-10' AND m.date < '2026-10-06')")
     ]);
     const archive=await archiveStatus(env).catch(err=>({archive_error:String(err)}));
     const xmlArchive=await xmlArchiveStatus(env).catch(err=>({xml_archive_error:String(err)}));
