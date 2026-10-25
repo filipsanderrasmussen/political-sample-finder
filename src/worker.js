@@ -447,7 +447,9 @@ export default {
       catch(err){console.error("FTS5 index migration:",err);}
       // Audio-only: import ONLY verified official XML + MP3 pairs.
       // Existing PDF-only archive is never bulk-imported by the scheduler.
-      for(let i=0;i<3;i++){
+      // D1 sees 60 speeches per bounded batch. Six sequential chunks per
+      // 30-minute Cron keep pace with the archive crawler without spikes.
+      for(let i=0;i<6;i++){
         const r=await syncXmlBatch(env);
         if(r.done)break;
       }
