@@ -179,12 +179,12 @@ test("the supplied original MP3 is preloaded with no synthetic audio",()=>{
   assert.ok(html.includes('data-boot-sound-src="/boot.mp3"'));
   assert.ok(html.includes('<link rel="preload" as="audio" href="/boot.mp3" type="audio/mpeg">'));
   assert.ok(monitor.includes("schedule(ready,BOOT_DURATION_MS)"));
-  assert.equal(BOOT_DURATION_MS,3650);
+  assert.equal(BOOT_DURATION_MS,9000);
   assert.ok(BOOT_DURATION_MS < 12900, "The screen becomes interactive before the 12.9-second sound finishes");
 });
 
 test("startup diagnostic text resembles a serial-ROM terminal, not a marketing splash",()=>{
-  assert.equal(BOOT_STEPS.length,7);
+  assert.equal(BOOT_STEPS.length,12);
   assert.equal(BOOT_STEPS.at(-1).text,"SYSTEM KLAR");
   assert.equal(BOOT_STEPS[0].text,"TD-2000 TERMINAL   ROM V1.7");
   assert.ok(BOOT_STEPS.some(x=>x.text.includes("64 KB RAM")));
