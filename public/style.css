@@ -265,126 +265,185 @@ footer{
 .transcript-foot{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:10px;margin-top:10px}
 .transcript-foot span{color:var(--muted)}
 
-/* 1987 terminal monitor: a substantial graphite chassis.
-   Full viewport: screen contents scroll inside the glass, not behind the bezel. */
+/* A whole, tangible terminal on a black stage, not a border around the webpage.
+   Leave the useful area as large as practical; scroll only inside the glass. */
 html,body{height:100%;overflow:hidden}
-body{background:#171717}
+body{
+  display:flex;align-items:center;justify-content:center;
+  background:#050505;
+}
 body::after{display:none}
 .monitor-shell{
-  --bezel-side:clamp(15px,1.8vw,30px);
-  --bezel-top:clamp(14px,1.5vw,24px);
-  --panel-height:74px;
-  display:grid;grid-template-rows:minmax(0,1fr) var(--panel-height);gap:0;
-  width:100%;height:100vh;height:100dvh;min-height:300px;
-  padding:var(--bezel-top) var(--bezel-side) 0;overflow:hidden;
-  background:linear-gradient(140deg,#444 0%,#2c2c2c 15%,#343434 78%,#181818 100%);
-  box-shadow:inset 0 2px 0 #777,inset 0 0 0 2px #191919;
+  --bezel-side:clamp(24px,3vw,43px);
+  --bezel-top:clamp(25px,3.3vw,46px);
+  --panel-height:clamp(85px,9vh,109px);
+  position:relative;isolation:isolate;
+  display:grid;grid-template-rows:minmax(0,1fr) var(--panel-height);
+  width:min(93vw,1500px);
+  height:min(89vh,940px);height:min(89dvh,940px);
+  min-height:340px;padding:var(--bezel-top) var(--bezel-side) 0;
+  overflow:hidden;
+  background:linear-gradient(130deg,#555 0%,#414141 9%,#323232 55%,#252525 100%);
+  border:2px solid #656565;
+  border-bottom:5px solid #171717;
+  border-radius:22px 22px 30px 30px;
+  box-shadow:inset 0 2px 1px #888,inset 0 -8px 12px #151515,
+    0 24px 52px rgb(0 0 0 / .78),0 8px 0 #111;
+}
+/* Narrow seams and embossed edges make this read as a piece of hardware. */
+.monitor-shell::before{
+  content:"";position:absolute;inset:7px 8px 8px;z-index:1;pointer-events:none;
+  border:1px solid rgb(0 0 0 / .32);border-radius:16px 16px 25px 25px;
+  box-shadow:inset 0 1px 0 rgb(255 255 255 / .10);
 }
 .monitor-screen{
-  position:relative;min-height:0;overflow:auto;overscroll-behavior:contain;
-  border:3px solid #111;border-radius:31px / 25px;background:var(--bg);
-  box-shadow:0 0 0 4px #242424,inset 0 0 55px #000,inset 0 0 0 3px #0d0d0d;
+  position:relative;z-index:2;min-width:0;min-height:0;
+  overflow:auto;overscroll-behavior:contain;
+  border:4px solid #0e0e0e;border-top-color:#060606;border-bottom-color:#484848;
+  border-radius:48px / 36px;background:var(--bg);
+  box-shadow:0 0 0 5px #282828,0 0 0 7px #1d1d1d,
+    inset 0 0 65px #000,inset 0 0 0 3px #0a0a0a;
   scrollbar-width:thin;
   scrollbar-color:color-mix(in srgb,var(--accent) 38%,transparent) #070707;
 }
-.monitor-screen::before{
-  content:"";position:sticky;display:block;pointer-events:none;
-  top:0;height:0;z-index:5;
-  box-shadow:0 0 36px 10px #000;
-}
+.monitor-screen::before,
 .monitor-screen::after{
-  content:"";position:sticky;display:block;pointer-events:none;
-  bottom:0;height:0;z-index:5;
-  box-shadow:0 0 36px 12px #000;
+  content:"";position:sticky;display:block;pointer-events:none;height:0;z-index:5;
+  box-shadow:0 0 30px 10px #000;
 }
-/* Keep CRT texture over the glass without covering links or text selection. */
-.monitor-shell{position:relative}
+.monitor-screen::before{top:0}
+.monitor-screen::after{bottom:0}
+/* Very faint horizontal phosphor structure appears only with the power on. */
 .monitor-shell::after{
-  content:"";position:absolute;pointer-events:none;z-index:20;
-  left:calc(var(--bezel-side) + 3px);right:calc(var(--bezel-side) + 3px);
-  top:calc(var(--bezel-top) + 3px);bottom:calc(var(--panel-height) + 3px);
-  border-radius:30px / 24px;
+  content:"";position:absolute;pointer-events:none;z-index:5;
+  left:calc(var(--bezel-side) + 4px);right:calc(var(--bezel-side) + 4px);
+  top:calc(var(--bezel-top) + 4px);bottom:calc(var(--panel-height) + 4px);
+  border-radius:43px / 32px;
   background:repeating-linear-gradient(0deg,transparent 0 3px,#000 4px 5px);
-  opacity:.12;
-  box-shadow:inset 0 0 30px #000;
+  opacity:.10;box-shadow:inset 0 0 32px #000;
 }
 .monitor-shell .terminal-frame{
   width:100%;max-width:none;min-height:100%;margin:0;border:0;
   border-radius:0;background:transparent;box-shadow:none;overflow:visible;
 }
+/* Off means OFF. The visible glass contains zero words and zero glow. */
 .monitor-shell[data-power="off"] .terminal-frame,
 .monitor-shell[data-power="booting"] .terminal-frame{display:none}
 .monitor-shell[data-power="on"] .monitor-boot,
-.monitor-shell[data-power="off"] .monitor-boot{display:none}
-/* Power off means no phosphor: no scanlines, words or luminous glass. */
-.monitor-shell[data-power="off"] .monitor-screen{background:#010101;box-shadow:0 0 0 4px #242424,inset 0 0 70px #000}
-.monitor-shell[data-power="off"]::after{display:none}
-.monitor-shell[data-power="on"] .terminal-frame{
-  animation:crt-energize .5s ease-out both;
+.monitor-shell[data-power="off"] .monitor-boot,
+.monitor-shell[data-power="powering-down"] .monitor-boot{display:none}
+.monitor-shell[data-power="off"] .monitor-screen{
+  background:#010101;
+  box-shadow:0 0 0 5px #282828,0 0 0 7px #1d1d1d,inset 0 0 80px #000;
 }
-@keyframes crt-energize{
-  0%{opacity:0;filter:brightness(2);transform:scaleY(.012)}
-  50%{opacity:.9;filter:brightness(1.4);transform:scaleY(1)}
-  100%{opacity:1;filter:brightness(1);transform:scaleY(1)}
+.monitor-shell[data-power="off"]::after{display:none}
+/* A cold tube takes a moment to brighten and sharpen; no fake scan collapse. */
+.monitor-shell[data-power="booting"] .monitor-boot{
+  animation:crt-warm-up 1.45s ease-out both;
+}
+.monitor-shell[data-power="on"] .terminal-frame{
+  animation:crt-warm-up .95s ease-out both;
+}
+.monitor-shell[data-power="powering-down"] .terminal-frame{
+  animation:crt-cool-down .95s ease-in both;
+}
+@keyframes crt-warm-up{
+  0%{opacity:0;filter:blur(15px) brightness(.15)}
+  28%{opacity:.16;filter:blur(10px) brightness(.45)}
+  66%{opacity:.64;filter:blur(4px) brightness(.78)}
+  100%{opacity:1;filter:blur(0) brightness(1)}
+}
+@keyframes crt-cool-down{
+  0%{opacity:1;filter:blur(0) brightness(1)}
+  34%{opacity:.68;filter:blur(2px) brightness(.75)}
+  75%{opacity:.24;filter:blur(8px) brightness(.33)}
+  100%{opacity:0;filter:blur(14px) brightness(.10)}
 }
 .monitor-boot{
-  display:flex;flex-direction:column;justify-content:center;align-items:center;
-  min-height:100%;padding:32px;color:var(--accent);
-  font-size:clamp(12px,1.5vw,17px);letter-spacing:.07em;
+  display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;
+  min-height:100%;padding:clamp(27px,4.5vw,60px) clamp(22px,5vw,72px);
+  color:var(--accent);font-family:"VT323",ui-monospace,monospace;
+  font-size:clamp(22px,2.6vw,35px);line-height:1.23;letter-spacing:.018em;
 }
 .monitor-boot-lines{
-  display:block;max-width:min(680px,100%);width:100%;min-height:190px;
-  text-align:left;color:var(--accent);text-shadow:0 0 12px color-mix(in srgb,var(--accent) 27%,transparent);
+  display:block;width:100%;max-width:100%;text-align:left;
+  color:var(--accent);text-shadow:0 0 12px color-mix(in srgb,var(--accent) 24%,transparent);
 }
 .monitor-offline[hidden],.monitor-boot-lines[hidden]{display:none!important}
-.monitor-boot-row{padding:4px 0;white-space:normal;overflow-wrap:anywhere}
+.monitor-boot-row{
+  padding:1px 0;white-space:pre-wrap;overflow-wrap:anywhere;
+  animation:boot-line-materialize .22s ease-out both;
+}
+@keyframes boot-line-materialize{
+  from{opacity:.12;filter:blur(2px)}
+  to{opacity:1;filter:blur(0)}
+}
 .monitor-controls{
+  position:relative;z-index:3;
   display:flex;align-items:center;justify-content:space-between;gap:16px;
-  padding:8px 15px 10px 25px;color:#c7c7c7;font-family:ui-monospace,Consolas,monospace;
+  padding:12px 22px 15px 28px;
+  color:#c7c7c7;font-family:ui-monospace,Consolas,monospace;
   text-shadow:0 1px 0 #050505;
 }
-.monitor-model{font-size:10px;letter-spacing:.22em;font-weight:750;color:#c2c2c2}
-.monitor-model span{color:#8e8e8e}
-.monitor-control-group{display:flex;align-items:center;gap:10px}
+.monitor-model{
+  font-size:11px;letter-spacing:.19em;font-weight:750;color:#cacaca;
+  text-shadow:0 1px 1px #111;
+}
+.monitor-model span{color:#999}
+.monitor-control-group{display:flex;align-items:center;gap:13px}
 .monitor-power-led{
-  display:block;width:8px;height:8px;border-radius:50%;background:#0a0a0a;
+  display:block;width:8px;height:8px;border-radius:50%;background:#090909;
   border:1px solid #777;box-shadow:inset 0 1px 2px #000;
+  transition:background .3s,box-shadow .3s;
 }
 .monitor-shell[data-power="on"] .monitor-power-led,
 .monitor-shell[data-power="booting"] .monitor-power-led{
   background:var(--accent);border-color:var(--accent);
   box-shadow:0 0 7px color-mix(in srgb,var(--accent) 70%,transparent);
 }
-.monitor-power-caption{font-size:9px;letter-spacing:.09em;color:#b2b2b2}
+.monitor-power-caption{font-size:10px;letter-spacing:.08em;color:#b2b2b2}
 .monitor-power-button{
-  display:flex;align-items:center;justify-content:center;gap:8px;
-  min-width:122px;min-height:42px;padding:5px 18px;
-  border:1px solid #777;border-top-color:#959595;border-bottom-color:#171717;
-  border-radius:5px;color:#f0f0f0;background:linear-gradient(#474747,#222);
-  box-shadow:inset 0 1px 0 #666,0 1px 2px #111;
+  display:flex;align-items:center;justify-content:center;gap:9px;
+  min-width:128px;min-height:45px;padding:5px 18px;
+  border:1px solid #888;border-top-color:#aaa;border-bottom-color:#161616;
+  border-radius:5px;color:#f0f0f0;background:linear-gradient(#4b4b4b,#202020);
+  box-shadow:inset 0 1px 0 #777,0 2px 3px #111;
   font-size:12px;font-weight:800;letter-spacing:.09em;
 }
-.monitor-power-button:hover:not(:disabled){background:linear-gradient(#575757,#303030)}
+.monitor-power-button:hover:not(:disabled){background:linear-gradient(#595959,#303030)}
 .monitor-power-button:active:not(:disabled){box-shadow:inset 0 2px 4px #090909}
 .monitor-power-button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .monitor-power-button:disabled{opacity:.75;cursor:progress}
-.monitor-power-icon{font-size:17px;line-height:1}
+.monitor-power-icon{font-size:18px;line-height:1}
 @media(max-width:790px){
-  .monitor-shell .terminal-frame{width:100%;margin:0}
+  .monitor-shell{
+    --bezel-side:23px;--bezel-top:23px;--panel-height:80px;
+    width:95vw;height:92vh;height:92dvh;
+  }
 }
 @media(max-width:580px){
-  .monitor-shell{--bezel-side:11px;--bezel-top:10px;--panel-height:57px}
-  .monitor-screen{border-radius:20px / 16px}
-  .monitor-shell::after{border-radius:19px / 15px}
-  .monitor-controls{padding:4px 7px 5px 9px}
+  .monitor-shell{
+    --bezel-side:13px;--bezel-top:13px;--panel-height:60px;
+    width:97vw;height:96vh;height:96dvh;min-height:0;
+    border-radius:12px 12px 17px 17px;
+  }
+  .monitor-screen{border-radius:23px / 18px;border-width:3px}
+  .monitor-shell::before{inset:4px;border-radius:9px 9px 14px 14px}
+  .monitor-shell::after{border-radius:21px / 17px}
+  .monitor-controls{padding:5px 8px 8px 11px}
   .monitor-model{font-size:8px;letter-spacing:.08em}
-  .monitor-power-button{min-height:38px;min-width:96px;padding:3px 11px}
-  .monitor-control-group{gap:6px}
+  .monitor-power-button{min-height:39px;min-width:98px;padding:3px 9px}
+  .monitor-control-group{gap:7px}
   .monitor-power-caption{display:none}
-  .monitor-boot{padding:18px;font-size:12px}
+  .monitor-boot{
+    padding:24px 15px;font-size:clamp(18px,5vw,27px);
+  }
 }
 @media(prefers-reduced-motion:reduce){
-  .monitor-shell[data-power="on"] .terminal-frame{animation:none}
+  .monitor-shell[data-power="on"] .terminal-frame,
+  .monitor-shell[data-power="booting"] .monitor-boot,
+  .monitor-shell[data-power="powering-down"] .terminal-frame,
+  .monitor-boot-row{animation:none}
 }
 
 @media(max-width:790px){
