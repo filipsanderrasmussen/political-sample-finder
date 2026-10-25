@@ -4,11 +4,15 @@ class TaledatabaseRecorder extends AudioWorkletProcessor {
     super();
     this.remaining=0;
     this.recording=false;
+    this.paused=false;
     this.port.onmessage=e=>{
       if(e.data?.type==="start"){
         this.remaining=Math.max(1,Math.round(e.data.frames));
         this.recording=true;
+        this.paused=false;
       }
+      if(e.data?.type==="pause")this.paused=true;
+      if(e.data?.type==="resume")this.paused=false;
       if(e.data?.type==="cancel")this.recording=false;
     };
   }
@@ -18,7 +22,7 @@ class TaledatabaseRecorder extends AudioWorkletProcessor {
     for(let ch=0;ch<output.length;ch++){
       if(input[ch]||input[0])output[ch].set(input[ch]||input[0]);
     }
-    if(!this.recording||!input.length||!input[0].length)return true;
+    if(!this.recording||this.paused||!input.length||!input[0].length)return true;
     const frames=Math.min(this.remaining,input[0].length);
     const left=new Float32Array(frames);
     const right=new Float32Array(frames);
