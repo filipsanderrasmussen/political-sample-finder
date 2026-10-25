@@ -25,10 +25,20 @@ test("phosphor terminal homepage keeps search controls and no marketing hero",()
 });
 
 test("actual live stats are bound to three terminal readouts",()=>{
-  for(const id of ["statMeetings","statSpeeches","statAudio"]){
+  for(const id of ["statMeetings","statSpeeches","statPeriod"]){
     assert.match(html,new RegExp('id="'+id+'"'));
     assert.match(js,new RegExp('\\$\\("'+id+'"\\)\\.textContent'));
   }
+  assert.match(html,/MØDER I SALEN/);
+  assert.match(html,/TALEINDLÆG/);
+  assert.match(html,/ARKIVETS ÅR/);
+  assert.match(html,/id="archiveCoverage"/);
+  assert.match(html,/HVAD TÆLLER VI\?/);
+  assert.match(html,/IKKE KOMPLET DÆKNING|KUN MØDER MED ORIGINAL MP3|en registreret taletur/i);
+  assert.match(js,/searchable_first_date/);
+  assert.match(js,/searchable_last_date/);
+  assert.match(js,/IKKE KOMPLET DÆKNING AF PERIODEN/);
+  assert.doesNotMatch(html,/LYDKILDER|TALEAFSNIT|SØGBARE MØDER/);
   assert.match(css,/--accent:#4aff8f/);
   assert.doesNotMatch(css,/@keyframes cursor-blink|\.blinking-cursor|\.hero-cursor/);
   assert.match(css,/caret-color:var\(--accent\)/);
