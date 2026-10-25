@@ -1,3 +1,5 @@
+import {preloadBootAudio} from "./boot-audio.js";
+
 // The terminal's front-panel power switch and deliberately theatrical start-up.
 // No network requests are needed to boot. The real search UI is initialized once
 // the monitor is on; only a successful boot is remembered per browser session.
@@ -38,6 +40,7 @@ export function initMonitor({onReady,onShutdown}){
   const lines=document.getElementById("monitorBootLines");
   if(!shell||!screen||!content||!power||!label||!offline||!lines)
     throw new Error("Skærmens betjeningspanel mangler.");
+  const bootAudio=preloadBootAudio(shell.dataset.bootSoundSrc);
   const timers=new Set();
   let state="off";
   const schedule=(fn,ms)=>{
@@ -72,6 +75,7 @@ export function initMonitor({onReady,onShutdown}){
     clearTimers();
     storageRemove(SESSION_KEY);
     // Pause audio and dismiss dialogs as soon as the physical switch is thrown.
+    bootAudio.stop();
     onShutdown?.();
     const reduceMotion=window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
     if(reduceMotion){
@@ -89,6 +93,7 @@ export function initMonitor({onReady,onShutdown}){
   };
   const powerOn=()=>{
     if(state!=="off")return;
+    bootAudio.play(); // Directly inside the click handler; never await first.
     setState("booting");
     lines.replaceChildren();
     const reduceMotion=window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
