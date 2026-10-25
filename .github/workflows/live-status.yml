@@ -33,7 +33,7 @@ jobs:
                 data=json.loads(body)
                 summary={"http":response.status,"content_type":response.headers.get("content-type")}
                 if name=="stats":
-                  for k in ["meetings","speeches","verified_audio_meetings","audio_speeches","xml_meetings","xml_imported_meetings","xml_remaining_meetings","archive_meetings","remaining_meetings","archive_error"]:
+                  for k in ["meetings","speeches","verified_audio_meetings","audio_speeches","searchable_first_date","searchable_last_date","xml_meetings","xml_imported_meetings","xml_remaining_meetings","archive_meetings","remaining_meetings","archive_error"]:
                     summary[k]=data.get(k)
                 elif name=="archive":
                   summary={k:data.get(k) for k in ["xml_meetings","xml_imported_meetings","xml_remaining_meetings","archive_meetings","indexed_meetings"]}
@@ -45,6 +45,18 @@ jobs:
                 report["endpoints"][name]=summary
             except urllib.error.HTTPError as exc:report["endpoints"][name]={"http":exc.code,"error":str(exc)}
             except Exception as exc:report["endpoints"][name]={"error":str(exc)}
+          # Latest deployed HTML and actual archive year coverage.
+          try:
+            with urllib.request.urlopen(target+"/",timeout=20) as response:
+              homepage=response.read(300000).decode("utf-8","replace")
+            report["terminology_live"]={
+              "plenary_meetings":"MØDER I SALEN" in homepage,
+              "speech_turns":"TALEINDLÆG" in homepage,
+              "archive_years":"ARKIVETS ÅR" in homepage,
+              "coverage_note":'id="archiveCoverage"' in homepage
+            }
+          except Exception as exc:
+            report["terminology_live"]={"error":str(exc)[:160]}
           report["v04_live"] = (
             isinstance(report["endpoints"].get("stats",{}).get("verified_audio_meetings"),int)
             and "xml_meetings" in report["endpoints"].get("archive",{})
