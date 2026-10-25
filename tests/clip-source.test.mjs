@@ -62,5 +62,5 @@ test("worker wires the public range proxy without requiring admin login or D1",(
   const source=readFileSync("src/worker.js","utf8");
   assert.match(source,/relayOfficialAudio\(request,url\)/);
   assert.ok(source.indexOf('if(url.pathname==="/api/audio-stream")') <
-    source.indexOf("try{return await endpoint(request,env,url)}"));
+    source.indexOf("return await endpoint(request,env,url)"));
 });
