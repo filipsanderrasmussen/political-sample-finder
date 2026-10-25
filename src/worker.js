@@ -1,5 +1,6 @@
 import { archiveManifest, archiveStatus, syncArchiveBatch } from "./archive.js";
 import { ensureSearchIndex } from "./search-index.js";
+import { relayOfficialAudio } from "./clip-source.js";
 import offlinePodcastIndex from "./audio-index.json" with { type: "json" };
 // Political Sample Finder — Cloudflare Worker + D1.
 // Source-backed: results only come from imported Folketingstidende PDFs.
@@ -398,6 +399,10 @@ export default {
   async fetch(request,env){
     const url=new URL(request.url);
     if(!url.pathname.startsWith("/api/"))return env.ASSETS.fetch(request);
+    if(url.pathname==="/api/audio-stream"){
+      try{return await relayOfficialAudio(request,url)}
+      catch(err){console.error("Official audio relay:",err);return error("Lydserveren er midlertidigt utilgængelig.",502)}
+    }
     try{return await endpoint(request,env,url);}
     catch(err){
       console.error("API error:",err);
