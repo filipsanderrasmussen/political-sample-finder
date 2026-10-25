@@ -13,7 +13,7 @@ def request(route,range_header=None):
     if range_header:headers["Range"]=range_header
     try:
         with urllib.request.urlopen(urllib.request.Request(BASE+route,headers=headers),timeout=24) as r:
-            body=r.read(150001 if not range_header else 1500)
+            body=r.read(150001 if not range_header else 1024)
             if len(body)>(150000 if not range_header else 1024):
                 raise ValueError("Source response exceeds read-only test byte cap")
             return {"status":r.status,"headers":dict(r.headers),"body":body}
