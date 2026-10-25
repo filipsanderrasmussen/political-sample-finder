@@ -234,8 +234,11 @@ async function findSpeeches(env,params) {
   const parties=(params.get("party")||"").split(",").map(x=>x.trim().toUpperCase())
      .filter(x=>/^[A-ZÆØÅ]{1,6}$/.test(x)).slice(0,12);
   if(parties.length){
-    conditions.push("s.party IN ("+parties.map(() => "?").join(",")+")");
-    values.push(...parties);
+    // Older PDF transcripts have no party column yet. Preserve their
+    // established speaker suffix, e.g. "Anders Kronborg (S)", as a fallback.
+    conditions.push("(s.party IN ("+parties.map(() => "?").join(",")+") OR "+
+      "(s.party IS NULL AND ("+parties.map(() => "s.speaker LIKE ?").join(" OR ")+")))");
+    values.push(...parties,...parties.map(x=>"% ("+x+")"));
   }
   if(fav)conditions.push("f.speech_id IS NOT NULL");
   const sorting=params.get("sort")||"newest";
@@ -263,6 +266,10 @@ async function findSpeeches(env,params) {
     r.first_clock=anchor?anchor[1]+":"+anchor[2]:r.clock.slice(0,5);
     r.podcasts=[{mp3_url:r.mp3_url,title:r.audio_title,date:r.date,
                  episode_url:r.mp3_url,feed:"Salen"}];
+    if(!r.party){
+      const suffix=r.speaker?.match(/\(([A-ZÆØÅ]{1,6})\)\s*$/);
+      r.party=suffix?suffix[1]:null;
+    }
     r.favorite=Boolean(r.favorite);
     r.audio_source="verified_mp3";
     delete r.mp3_url;
