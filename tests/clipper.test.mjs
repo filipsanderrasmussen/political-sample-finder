@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 import vm from "node:vm";
-import {formatClipTime,parseClipTime,validateClip,encodeWav,MAX_CLIP_SECONDS} from "../public/clipper.js";
+import {formatClipTime,parseClipTime,validateClip,encodeWav,MAX_CLIP_SECONDS,approvedClipSource} from "../public/clipper.js";
 
 const html=readFileSync("public/index.html","utf8");
 const css=readFileSync("public/style.css","utf8");
@@ -74,14 +74,26 @@ test("clipper is inside current player, and preserves the existing playback work
   assert.match(processor,/this\.remaining-=n/);
 });
 
-test("sample recording is bounded and sent through a same-origin streaming URL",()=>{
+test("sample recording streams direct official CORS MP3 without a heavy Cloudflare proxy",()=>{
   const source=readFileSync("public/clipper.js","utf8");
-  assert.match(source,/\/api\/audio-stream\?source=/);
+  assert.match(source,/media\.crossOrigin="anonymous"/);
+  assert.match(source,/media\.src=src/);
+  assert.match(source,/approvedClipSource\(src\)/);
+  assert.doesNotMatch(source,/media\.src="\/api\/audio-stream/);
   assert.match(source,/createMediaElementSource\(media\)/);
   assert.match(source,/AudioWorkletNode\(context,"taledatabase-recorder"/);
   assert.match(source,/Math\.round\(\(end-start\)\*context\.sampleRate\)/);
   assert.match(source,/new Blob\(\[bytes\],\{type:"audio\/wav"\}\)/);
   assert.doesNotMatch(source,/ffmpeg|MediaRecorder|response\.arrayBuffer\(\)/);
+});
+
+test("clipper only permits exact official Kaltura audio URLs",()=>{
+  const valid="https://cdnapi.kaltura.com/p/2158211/sp/0/playManifest/entryId/1_50oi4p46/protocol/http/flavorParamIds/0/format/url/08-11-2024_09-00_salen.mp3";
+  assert.equal(approvedClipSource(valid),true);
+  assert.equal(approvedClipSource(valid+"?unexpected=1"),false);
+  assert.equal(approvedClipSource(valid.replace("cdnapi.kaltura.com","evil.example")),false);
+  assert.equal(approvedClipSource(valid.replace(".mp3",".mp4")),false);
+  assert.equal(approvedClipSource("javascript:alert(1)"),false);
 });
 
 test("AudioWorklet captures the exact requested number of PCM frames, not extra silence",()=>{
