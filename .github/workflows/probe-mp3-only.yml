@@ -1,0 +1,33 @@
+name: Test kun officielle MP3 lydfiler
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/probe-mp3-only.py'
+      - '.github/workflows/probe-mp3-only.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  mp3-probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Test source syntax
+        run: python -m py_compile scripts/probe-mp3-only.py
+      - name: Probe RSS, MP3 Range, and bounded WAV
+        run: python -u scripts/probe-mp3-only.py
+      - name: Save diagnostic evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ft-mp3-only-result
+          path: ft-mp3-only-test.json
+          if-no-files-found: warn
