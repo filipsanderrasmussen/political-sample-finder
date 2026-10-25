@@ -46,11 +46,30 @@ def analyze(source,data):
     hits=[(tag,txt[max(0,txt.casefold().find(SEARCH)-110):txt.casefold().find(SEARCH)+len(SEARCH)+160])
           for tag,txt in values if SEARCH in txt.casefold()]
     times=[(tag,value[:60]) for tag,value in values if re.search(r"^(?:[01]?\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$",value)]
+    # Associate the exact quote with its enclosing speech segment and metadata.
+    matched_segments=[]
+    for segment in root.iter():
+        if local(segment.tag)!="TaleSegment":
+            continue
+        chars=[(x.text or "").strip() for x in segment.iter() if local(x.tag)=="Char" and x.text]
+        full=" ".join(chars)
+        if SEARCH not in full.casefold():
+            continue
+        fields={}
+        for element in segment.iter():
+            tag=local(element.tag)
+            if tag in ("StartDateTime","EndDateTime","OratorFirstName","OratorLastName",
+                       "GroupNameShort","OratorRole","TalerTitel","EdixiStatus","TaleType"):
+                value=(element.text or "").strip()
+                if value and tag not in fields:fields[tag]=value[:160]
+        p=full.casefold().find(SEARCH)
+        matched_segments.append({"fields":fields,"quote_context":full[max(0,p-145):p+260],
+                                 "char_elements":len(chars)})
     return {"source":source,"bytes":len(data),"well_formed_xml":True,"root_tag":local(root.tag),
             "elements":sum(tags.values()),"common_tags":tags.most_common(24),
             "speech_related_tags":dict(list(matching_tags.items())[:24]),
             "time_examples":times[:8],"sample_element_values":values[:14],
-            "keyword_hits":hits[:4],"keyword_count":len(hits)}
+            "keyword_hits":hits[:4],"keyword_count":len(hits),"matched_speech_segments":matched_segments[:3]}
 
 def try_http():
     urls=[
