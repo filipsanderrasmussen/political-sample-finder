@@ -112,7 +112,7 @@ async function search(resetPage=false){
  try{
   const p=new URLSearchParams({q:state.q,speaker:state.speaker,favorites:state.favorites?"1":"0",
    from:$("yearFrom").value,to:$("yearTo").value,
-   sort:$("sortResults").value,party:[...document.querySelectorAll('input[name="party"]:checked')].map(x=>x.value).join(","),
+   party:[...document.querySelectorAll('input[name="party"]:checked')].map(x=>x.value).join(","),
    page:String(state.page)});
   const data=await api("/api/search?"+p);
   if(current===state.searchRequestId){state.rows=data.results||[];state.hasMore=!!data.has_more;}
@@ -381,7 +381,7 @@ function bind(){
  $("sampleAudio").onerror=()=>{if(state.playing)$("playerStatus").textContent="Kunne ikke afspille MP3 her. Åbn originalen i stedet.";};
  $("searchForm").onsubmit=e=>{e.preventDefault();search(true);};
  let timer;$("speaker").oninput=()=>{clearTimeout(timer);timer=setTimeout(()=>search(true),350);};
- for(const id of ["yearFrom","yearTo","sortResults"]){$(id).addEventListener("change",()=>search(true));}
+ for(const id of ["yearFrom","yearTo"]){$(id).addEventListener("change",()=>search(true));}
  const partySummary=()=>{
   const selected=[...document.querySelectorAll('input[name="party"]:checked')].map(x=>x.value);
   const summary=$("partySummary");
@@ -391,7 +391,6 @@ function bind(){
  for(const input of document.querySelectorAll('input[name="party"]'))input.addEventListener("change",()=>{partySummary();search(true);});
  $("resetFilters").onclick=()=>{
   $("speaker").value="";$("yearFrom").value="";$("yearTo").value="";
-  $("sortResults").value="newest";
   for(const input of document.querySelectorAll('input[name="party"]'))input.checked=false;
   partySummary();search(true);
  };
