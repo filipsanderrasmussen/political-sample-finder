@@ -10,7 +10,10 @@ test("phosphor terminal homepage keeps search controls and no marketing hero",()
   assert.match(html,/class="terminal-frame"/);
   assert.match(html,/id="siteTitle"/);
   assert.match(html,/TALEDATABASE/);
-  assert.match(html,/<span class="hero-number">2000/);
+  assert.match(html,/<h1 id="siteTitle">TALEDATABASE <span class="hero-number">2000<\/span><\/h1>/);
+  assert.ok(html.indexOf('id="siteTitle"')<html.indexOf('id="searchForm"'),"Brand must be in header before the search form");
+  assert.doesNotMatch(html,/class="hero"|class="stat-grid"/);
+  assert.match(html,/class="top-stats"/);
   assert.match(html,/<title>Taledatabase 2000/);
   assert.match(html,/TALEDATABASE 2000 \/\/ EDB-VÆRKTØJ TIL LYDSØGNING I FOLKETINGETS TALER/);
   assert.match(html,/id="searchForm"/);
@@ -28,10 +31,12 @@ test("phosphor terminal homepage keeps search controls and no marketing hero",()
 test("filters form one clear grid with aligned labels and sensible defaults",()=>{
   assert.match(html,/class="filter-toolbar"/);
   assert.match(html,/AFGRÆNS SØGNINGEN/);
-  for(const cls of ["filter-speaker","filter-party","filter-year-from","filter-year-to","filter-sort"]){
+  for(const cls of ["filter-speaker","filter-party","filter-year-from","filter-year-to"]){
     assert.match(html,new RegExp('class="filter-field '+cls+'"'));
   }
   assert.match(html,/class="search-filters"/);
+  assert.doesNotMatch(html,/id="sortResults"|SORTERING|Nyeste først|Ældste først/);
+  assert.doesNotMatch(js,/\$\("sortResults"\)/);
   assert.match(html,/id="partySummary"[^>]*>Alle partier<\/summary>/);
   assert.match(html,/id="yearFrom"[^>]*placeholder="—"/);
   assert.match(html,/id="yearTo"[^>]*placeholder="—"/);
@@ -44,7 +49,7 @@ test("filters form one clear grid with aligned labels and sensible defaults",()=
   assert.match(js,/\$\("yearTo"\)\.placeholder=last/);
 });
 
-test("actual live stats are bound to three terminal readouts",()=>{
+test("header contains two live counters while archive year moves into a discreet coverage strip",()=>{
   for(const id of ["statMeetings","statSpeeches","statPeriod"]){
     assert.match(html,new RegExp('id="'+id+'"'));
     assert.match(js,new RegExp('\\$\\("'+id+'"\\)\\.textContent'));
@@ -52,6 +57,14 @@ test("actual live stats are bound to three terminal readouts",()=>{
   assert.match(html,/MØDER I SALEN/);
   assert.match(html,/TALEINDLÆG/);
   assert.match(html,/ARKIVETS ÅR/);
+  assert.match(html,/class="archive-strip"/);
+  assert.ok(html.indexOf('id="statMeetings"')<html.indexOf('</header>'));
+  assert.ok(html.indexOf('id="statSpeeches"')<html.indexOf('</header>'));
+  assert.ok(html.indexOf('id="statPeriod"')>html.indexOf('</header>'));
+  assert.match(css,/\.brand h1\{/);
+  assert.match(css,/\.searchbar\{[\s\S]*?min-height:100px/); // legacy baseline, overridden by compact workspace
+  assert.match(css,/\/\* COMPACT WORKSPACE v2:/);
+  assert.match(css,/min-height:63px/);
   assert.match(html,/id="archiveCoverage"/);
   assert.match(html,/HVAD TÆLLER VI\?/);
   assert.match(html,/IKKE KOMPLET DÆKNING|KUN MØDER MED ORIGINAL MP3|en registreret taletur/i);
