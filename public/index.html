@@ -19,28 +19,26 @@
     </section>
     <div class="terminal-frame" id="terminalFrame" inert aria-hidden="true">
   <header class="topbar">
-    <div class="brand"><span class="brand-led" aria-hidden="true"></span><span>TD<span class="brand-slash">–</span>2000 <span class="brand-slash">//</span> TALEARKIV</span></div>
-    <div class="top-right"><span class="system-version">SYSTEM / UDGAVE 2000</span><button id="openImport" type="button" class="button outline">[ ARKIVSTATUS ]</button></div>
-  </header>
-  <main class="shell">
-    <section class="hero" aria-labelledby="siteTitle">
-      <div class="hero-command" aria-hidden="true"><span>● SYSTEM KLAR</span><span>OFFENTLIGE REFERATER / ORIGINAL LYD</span></div>
-      <h1 id="siteTitle"><span>TALEDATABASE</span><span class="hero-number">2000</span></h1>
-    </section>
-    <form class="searchpanel" id="searchForm" role="search">
-      <div class="searchbar"><span class="terminal-prompt" aria-hidden="true">&gt;</span><input id="query" name="q" type="search" enterkeyhint="search" placeholder="Angiv søgestreng" autocomplete="off" spellcheck="false" aria-label="Søg efter ord eller fraser"><button id="searchBtn" type="submit" class="button primary">SØG <span aria-hidden="true">↵</span></button></div>
-      <div class="stat-grid" aria-label="Omfanget af det søgbare lydarkiv">
+    <div class="brand">
+      <span class="brand-led" aria-hidden="true"></span>
+      <div class="brand-identity">
+        <h1 id="siteTitle">TALEDATABASE <span class="hero-number">2000</span></h1>
+        <span class="brand-subtitle">FOLKETINGETS TALER // ORIGINAL LYD</span>
+      </div>
+    </div>
+    <div class="top-right">
+      <div class="top-stats" aria-label="Omfanget af det søgbare lydarkiv">
         <div class="stat-cell"><span class="stat-label">MØDER I SALEN</span><strong id="statMeetings" class="stat-value">---</strong></div>
         <div class="stat-cell"><span class="stat-label">TALEINDLÆG</span><strong id="statSpeeches" class="stat-value">------</strong></div>
-        <div class="stat-cell"><span class="stat-label">ARKIVETS ÅR</span><strong id="statPeriod" class="stat-value stat-period">----</strong></div>
       </div>
-      <p id="archiveCoverage" class="archive-coverage">OPGØR SØGBAR LYD …</p>
-      <details class="archive-definition">
-        <summary>HVAD TÆLLER VI?</summary>
-        <p><strong>MØDE:</strong> Et møde i Folketingets sal med søgbart referat og original MP3. <strong>TALEINDLÆG:</strong> En registreret taletur i referatet — både længere indlæg, spørgsmål, replikker og bemærkninger fra mødelederen. Ikke antallet af unikke politikere eller færdige lydklip.</p>
-      </details>
+      <button id="openImport" type="button" class="button outline">[ ARKIVSTATUS ]</button>
+    </div>
+  </header>
+  <main class="shell">
+    <form class="searchpanel" id="searchForm" role="search">
+      <div class="searchbar"><span class="terminal-prompt" aria-hidden="true">&gt;</span><input id="query" name="q" type="search" enterkeyhint="search" placeholder="Angiv søgestreng" autocomplete="off" spellcheck="false" aria-label="Søg efter ord eller fraser"><button id="searchBtn" type="submit" class="button primary">SØG <span aria-hidden="true">↵</span></button></div>
       <span id="stats" class="sr-only" aria-live="polite">Indlæser arkivstatus</span>
-      <div class="search-options" aria-label="Afgræns søgeresultater">
+    <div class="search-options" aria-label="Afgræns søgeresultater">
         <div class="filter-toolbar">
           <span class="filter-heading">AFGRÆNS SØGNINGEN</span>
           <button id="resetFilters" type="button" class="filter-reset">NULSTIL FILTRE</button>
@@ -78,15 +76,15 @@
             <label for="yearTo">TIL ÅR</label>
             <input id="yearTo" type="number" min="1900" max="2099" placeholder="—" inputmode="numeric">
           </div>
-          <div class="filter-field filter-sort">
-            <label for="sortResults">SORTERING</label>
-            <select id="sortResults">
-              <option value="newest">Nyeste først</option>
-              <option value="oldest">Ældste først</option>
-              <option value="relevance">Relevans</option>
-            </select>
-          </div>
         </div>
+      </div>
+      <div class="archive-strip" aria-label="Arkivets tidsmæssige dækning">
+        <span class="archive-years">ARKIVETS ÅR <strong id="statPeriod" class="stat-value stat-period">----</strong></span>
+        <span id="archiveCoverage" class="archive-coverage">OPGØR SØGBAR LYD …</span>
+        <details class="archive-definition">
+          <summary>HVAD TÆLLER VI?</summary>
+          <p><strong>MØDE:</strong> Et møde i Folketingets sal med søgbart referat og original MP3. <strong>TALEINDLÆG:</strong> En registreret taletur i referatet — både længere indlæg, spørgsmål, replikker og bemærkninger fra mødelederen. Ikke antallet af unikke politikere eller færdige lydklip.</p>
+        </details>
       </div>
     </form>
     <section class="results-head" aria-label="Søgeresultater">
