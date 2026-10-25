@@ -654,3 +654,22 @@ footer{font-size:15px}
 @media(max-width:580px){.filter-field{flex:1 1 38%}.party-picker{flex:1 1 48%}
  #resetFilters{flex:1 1 44%}.search-filters{gap:8px}.search-pages{gap:7px}
  .search-pages button{font-size:16px;padding:8px}.search-pages span{font-size:18px}}
+
+
+/* Archival coverage: real searchable inventory, not all Folketing meetings. */
+.stat-value.stat-period{font-size:clamp(21px,3vw,37px);letter-spacing:.01em;white-space:nowrap}
+.archive-coverage{margin:-13px 0 8px;text-align:center;color:var(--muted);
+ font-size:11px;letter-spacing:.055em;line-height:1.6}
+.archive-definition{margin:0 0 19px;text-align:center;color:var(--muted);font-size:11px}
+.archive-definition summary{display:inline-block;cursor:pointer;color:var(--accent);
+ font-size:11px;letter-spacing:.09em;list-style:none}
+.archive-definition summary::before{content:"[ + ] "}
+.archive-definition[open] summary::before{content:"[ − ] "}
+.archive-definition p{max-width:680px;margin:10px auto 0;line-height:1.8}
+.archive-definition p strong{color:var(--accent)}
+@media(max-width:580px){
+ .stat-value.stat-period{font-size:clamp(16px,4vw,24px)}
+ .stat-label{font-size:9px;letter-spacing:.04em}
+ .archive-coverage{font-size:9px;line-height:1.7;margin-top:-10px}
+ .archive-definition{margin-bottom:13px}
+}
