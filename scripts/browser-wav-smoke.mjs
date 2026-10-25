@@ -16,6 +16,24 @@ try{
  page.on("pageerror",e=>errors.push(String(e).slice(0,250)));
  const reply=await page.goto(APP,{waitUntil:"domcontentloaded",timeout:40000});
  report.http=reply?.status();
+ await page.waitForFunction(()=>{
+   const counter=document.querySelector("#statMeetings")?.textContent?.trim()||"";
+   const coverage=document.querySelector("#archiveCoverage")?.textContent||"";
+   return /^\\d/.test(counter)&&coverage.includes("SØGBART NU");
+ },null,{timeout:22000});
+ report.archiveUi=await page.evaluate(async ()=>{
+   const response=await fetch("/api/stats");
+   const stats=await response.json();
+   return {
+     labels:[...document.querySelectorAll(".stat-label")].map(x=>x.textContent.trim()),
+     meetings:document.querySelector("#statMeetings")?.textContent?.trim(),
+     speech_turns:document.querySelector("#statSpeeches")?.textContent?.trim(),
+     period:document.querySelector("#statPeriod")?.textContent?.trim(),
+     coverage:document.querySelector("#archiveCoverage")?.textContent?.trim(),
+     first:stats.searchable_first_date,last:stats.searchable_last_date,
+     meetingCount:stats.verified_audio_meetings,speechCount:stats.audio_speeches
+   };
+ });
  report.export=await page.evaluate(async src=>{
    const {captureWav}=await import("/clipper.js");
    const started=performance.now();
@@ -34,7 +52,13 @@ try{
            peak,nonzero,elapsedMs:Math.round(performance.now()-started)};
  },SOURCE);
  report.pageErrors=errors;
- report.ok=report.http===200&&report.export.wavHeader==="RIFF"&&report.export.waveMark==="WAVE"&&report.export.bytes>10000&&report.export.peak>0&&report.export.nonzero>1000;
+ report.ok=report.http===200&&report.export.wavHeader==="RIFF"&&report.export.waveMark==="WAVE"&&report.export.bytes>10000&&report.export.peak>0&&report.export.nonzero>1000
+   &&report.archiveUi.labels.includes("MØDER I SALEN")
+   &&report.archiveUi.labels.includes("TALEINDLÆG")
+   &&report.archiveUi.labels.includes("ARKIVETS ÅR")
+   &&report.archiveUi.coverage.includes("IKKE KOMPLET DÆKNING")
+   &&report.archiveUi.meetings===report.archiveUi.meetingCount.toLocaleString("da-DK")
+   &&report.archiveUi.speech_turns===report.archiveUi.speechCount.toLocaleString("da-DK");
  await context.close();
 }catch(e){report.error=String(e).slice(0,900)}
 finally{await browser?.close().catch(()=>{});}
