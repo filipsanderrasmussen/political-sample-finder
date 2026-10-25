@@ -40,29 +40,52 @@
         <p><strong>MØDE:</strong> Et møde i Folketingets sal med søgbart referat og original MP3. <strong>TALEINDLÆG:</strong> En registreret taletur i referatet — både længere indlæg, spørgsmål, replikker og bemærkninger fra mødelederen. Ikke antallet af unikke politikere eller færdige lydklip.</p>
       </details>
       <span id="stats" class="sr-only" aria-live="polite">Indlæser arkivstatus</span>
-      <div class="search-options">
-        <input class="speakerfilter" id="speaker" type="search" placeholder="Filtrér på taler (valgfrit)" aria-label="Filtrér på taler" autocomplete="off">
-        <div class="search-filters" aria-label="Filtrér søgeresultater">
-          <div class="filter-field"><label for="yearFrom">FRA ÅR</label><input id="yearFrom" type="number" min="2010" max="2026" value="2010" inputmode="numeric"></div>
-          <div class="filter-field"><label for="yearTo">TIL ÅR</label><input id="yearTo" type="number" min="2010" max="2026" value="2026" inputmode="numeric"></div>
-          <div class="filter-field"><label for="sortResults">SORTERING</label><select id="sortResults"><option value="newest">Nyeste først</option><option value="oldest">Ældste først</option><option value="relevance">Relevans</option></select></div>
-          <details class="party-picker" id="partyPicker"><summary id="partySummary">PARTI: ALLE</summary>
-            <fieldset class="party-grid" aria-label="Vælg flere partier">
-              <label><input type="checkbox" name="party" value="S"> S</label>
-              <label><input type="checkbox" name="party" value="V"> V</label>
-              <label><input type="checkbox" name="party" value="M"> M</label>
-              <label><input type="checkbox" name="party" value="SF"> SF</label>
-              <label><input type="checkbox" name="party" value="EL"> Ø</label>
-              <label><input type="checkbox" name="party" value="RV"> RV</label>
-              <label><input type="checkbox" name="party" value="LA"> LA</label>
-              <label><input type="checkbox" name="party" value="DF"> DF</label>
-              <label><input type="checkbox" name="party" value="DD"> DD</label>
-              <label><input type="checkbox" name="party" value="KF"> KF</label>
-              <label><input type="checkbox" name="party" value="ALT"> Å</label>
-              <label><input type="checkbox" name="party" value="NB"> NB</label>
-            </fieldset>
-          </details>
-          <button id="resetFilters" type="button" class="button outline">NULSTIL FILTRE</button>
+      <div class="search-options" aria-label="Afgræns søgeresultater">
+        <div class="filter-toolbar">
+          <span class="filter-heading">AFGRÆNS SØGNINGEN</span>
+          <button id="resetFilters" type="button" class="filter-reset">NULSTIL FILTRE</button>
+        </div>
+        <div class="search-filters">
+          <div class="filter-field filter-speaker">
+            <label for="speaker">TALER</label>
+            <input class="speakerfilter" id="speaker" type="search" placeholder="Alle talere" autocomplete="off">
+          </div>
+          <div class="filter-field filter-party">
+            <span class="filter-label" id="partyFilterLabel">PARTI</span>
+            <details class="party-picker" id="partyPicker">
+              <summary id="partySummary" aria-labelledby="partyFilterLabel partySummary">Alle partier</summary>
+              <fieldset class="party-grid" aria-label="Vælg flere partier">
+                <label><input type="checkbox" name="party" value="S"> S</label>
+                <label><input type="checkbox" name="party" value="V"> V</label>
+                <label><input type="checkbox" name="party" value="M"> M</label>
+                <label><input type="checkbox" name="party" value="SF"> SF</label>
+                <label><input type="checkbox" name="party" value="EL"> Ø</label>
+                <label><input type="checkbox" name="party" value="RV"> RV</label>
+                <label><input type="checkbox" name="party" value="LA"> LA</label>
+                <label><input type="checkbox" name="party" value="DF"> DF</label>
+                <label><input type="checkbox" name="party" value="DD"> DD</label>
+                <label><input type="checkbox" name="party" value="KF"> KF</label>
+                <label><input type="checkbox" name="party" value="ALT"> Å</label>
+                <label><input type="checkbox" name="party" value="NB"> NB</label>
+              </fieldset>
+            </details>
+          </div>
+          <div class="filter-field filter-year-from">
+            <label for="yearFrom">FRA ÅR</label>
+            <input id="yearFrom" type="number" min="1900" max="2100" placeholder="—" inputmode="numeric">
+          </div>
+          <div class="filter-field filter-year-to">
+            <label for="yearTo">TIL ÅR</label>
+            <input id="yearTo" type="number" min="1900" max="2100" placeholder="—" inputmode="numeric">
+          </div>
+          <div class="filter-field filter-sort">
+            <label for="sortResults">SORTERING</label>
+            <select id="sortResults">
+              <option value="newest">Nyeste først</option>
+              <option value="oldest">Ældste først</option>
+              <option value="relevance">Relevans</option>
+            </select>
+          </div>
         </div>
       </div>
     </form>
