@@ -4,21 +4,60 @@ on:
     paths:
       - .github/workflows/live-status.yml
   workflow_dispatch:
+permissions:
+  contents: read
 jobs:
   check:
     runs-on: ubuntu-latest
+    timeout-minutes: 4
     steps:
-      - name: Read public read-only archive counts
+      - name: Compare deployed app with new XML archive API (read only)
         env:
           APP_URL: https://political-sample-finder.filip-8d4.workers.dev
         run: |
           python - <<'PY'
-          import urllib.request, json, os
-          url=os.environ['APP_URL']+'/api/stats'
-          try:
-              with urllib.request.urlopen(urllib.request.Request(url,headers={"Accept":"application/json"}),timeout=20) as r:
-                  data=json.loads(r.read().decode('utf-8'))
-              print(json.dumps({k:data.get(k) for k in ["meetings","speeches","audio_archive_meetings","archive_meetings","indexed_meetings","remaining_meetings","archive_error"]},ensure_ascii=False,indent=2))
-          except Exception as exc:
-              print("Live app not publicly reachable, possibly Cloudflare Access:",str(exc))
+          import json, os, urllib.error, urllib.parse, urllib.request
+          target=os.environ["APP_URL"].rstrip("/")
+          cases={
+            "stats":"/api/stats",
+            "archive":"/api/archive/status",
+            "search":"/api/search?"+urllib.parse.urlencode({"q":"ansvar","page":0,"from":"2024","to":"2026"})
+          }
+          report={"target":target,"endpoints":{}}
+          for name,route in cases.items():
+            req=urllib.request.Request(target+route,headers={"Accept":"application/json","User-Agent":"TALEDATABASE-2000-live-check/1.0"})
+            try:
+              with urllib.request.urlopen(req,timeout=20) as response:
+                body=response.read(150_001)
+                if len(body)>150000:raise ValueError("Response >150KB")
+                data=json.loads(body)
+                summary={"http":response.status,"content_type":response.headers.get("content-type")}
+                if name=="stats":
+                  for k in ["meetings","speeches","verified_audio_meetings","audio_speeches","xml_meetings","xml_imported_meetings","xml_remaining_meetings","archive_meetings","remaining_meetings","archive_error"]:
+                    summary[k]=data.get(k)
+                elif name=="archive":
+                  summary={k:data.get(k) for k in ["xml_meetings","xml_imported_meetings","xml_remaining_meetings","archive_meetings","indexed_meetings"]}
+                  summary["http"]=response.status
+                else:
+                  summary.update({"results_count":len(data.get("results",[])),"has_more":data.get("has_more"),"limit":data.get("limit"),
+                    "results_with_audio":sum(bool(x.get("podcasts")) for x in data.get("results",[])),
+                    "result_dates":list(dict.fromkeys(x.get("date") for x in data.get("results",[])))[:4]})
+                report["endpoints"][name]=summary
+            except urllib.error.HTTPError as exc:report["endpoints"][name]={"http":exc.code,"error":str(exc)}
+            except Exception as exc:report["endpoints"][name]={"error":str(exc)}
+          report["v04_live"] = (
+            isinstance(report["endpoints"].get("stats",{}).get("verified_audio_meetings"),int)
+            and "xml_meetings" in report["endpoints"].get("archive",{})
+            and report["endpoints"].get("search",{}).get("limit")==25
+          )
+          print(json.dumps(report,ensure_ascii=False,indent=2))
+          with open("live-audio-xml-check.json","w") as out:
+            json.dump(report,out,ensure_ascii=False,indent=2)
           PY
+      - name: Save live-state report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-archive-readonly-check
+          path: live-audio-xml-check.json
+          if-no-files-found: warn
