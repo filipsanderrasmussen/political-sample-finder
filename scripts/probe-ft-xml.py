@@ -65,11 +65,26 @@ def analyze(source,data):
         p=full.casefold().find(SEARCH)
         matched_segments.append({"fields":fields,"quote_context":full[max(0,p-145):p+260],
                                  "char_elements":len(chars)})
+    matched_tales=[]
+    for speech in root.iter():
+        if local(speech.tag)!="Tale":
+            continue
+        chars=[(x.text or "").strip() for x in speech.iter() if local(x.tag)=="Char" and x.text]
+        if SEARCH not in " ".join(chars).casefold():
+            continue
+        fields={}
+        for element in speech.iter():
+            tag=local(element.tag)
+            if tag in ("StartDateTime","EndDateTime","OratorFirstName","OratorLastName",
+                       "GroupNameShort","OratorRole","TalerTitel","EdixiStatus","TaleType"):
+                value=(element.text or "").strip()
+                if value and tag not in fields:fields[tag]=value[:160]
+        matched_tales.append(fields)
     return {"source":source,"bytes":len(data),"well_formed_xml":True,"root_tag":local(root.tag),
             "elements":sum(tags.values()),"common_tags":tags.most_common(24),
             "speech_related_tags":dict(list(matching_tags.items())[:24]),
             "time_examples":times[:8],"sample_element_values":values[:14],
-            "keyword_hits":hits[:4],"keyword_count":len(hits),"matched_speech_segments":matched_segments[:3]}
+            "keyword_hits":hits[:4],"keyword_count":len(hits),"matched_speech_segments":matched_segments[:3],"matched_tales":matched_tales[:3]}
 
 def try_http():
     urls=[
