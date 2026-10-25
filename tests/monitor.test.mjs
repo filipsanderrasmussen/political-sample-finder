@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
-import {BOOT_STEPS,initMonitor} from "../public/monitor.js";
+import {BOOT_STEPS,BOOT_DURATION_MS,POWER_DOWN_MS,initMonitor} from "../public/monitor.js";
 
 const html=readFileSync("public/index.html","utf8");
 const css=readFileSync("public/style.css","utf8");
@@ -69,15 +69,19 @@ test("real-world monitor is edge-to-edge with a physical switch; dialogs remain 
   assert.match(html,/id="terminalFrame" inert aria-hidden="true"/);
   assert.match(html,/id="playerDialog"/);
   assert.match(html,/id="importDialog"/);
-  assert.match(css,/\.monitor-shell\{[\s\S]*?height:100dvh/);
-  assert.match(css,/\.monitor-screen\{[\s\S]*?overflow:auto/);
-  assert.match(css,/\.monitor-shell\[data-power="off"\] \.terminal-frame/);
-  assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
-  assert.match(css,/--bezel-side:clamp\(15px,1\.8vw,30px\)/);
-  assert.match(css,/--panel-height:74px/);
-  assert.match(css,/\.monitor-shell\[data-power="off"\] \.monitor-boot\{display:none\}/);
-  assert.match(css,/\.monitor-shell\[data-power="off"\] \.monitor-screen\{background:#010101/);
-  assert.match(css,/\.monitor-shell\[data-power="off"\]::after\{display:none\}/);
+  assert.ok(css.includes("width:min(93vw,1500px)"),"Whole monitor is displayed with black margins");
+  assert.ok(css.includes("height:min(89dvh,940px)"),"Monitor is not cropped by viewport");
+  assert.ok(css.includes("overflow:auto;overscroll-behavior:contain"),"Content scrolls within the glass");
+  assert.ok(css.includes("--panel-height:clamp(85px,9vh,109px)"),"Substantial physical bottom console");
+  assert.ok(css.includes('data-power="off"] .monitor-boot,'),"Off state has no visible text");
+  assert.ok(css.includes('data-power="off"] .monitor-screen{'),"Off-state glass is dark");
+  assert.ok(css.includes('data-power="off"]::after{display:none}'),"Off-state scanlines disappear");
+  assert.ok(css.includes('data-power="powering-down"] .terminal-frame'),"Screen stays present while fading");
+  assert.ok(css.includes("@keyframes crt-warm-up"));
+  assert.ok(css.includes("@keyframes crt-cool-down"));
+  assert.ok(css.includes("filter:blur(15px) brightness(.15)"));
+  assert.ok(css.includes("filter:blur(14px) brightness(.10)"));
+  assert.ok(css.includes('@media(prefers-reduced-motion:reduce)'));
 
   assert.match(app,/initMonitor\(\{/);
   assert.match(app,/onShutdown:\(\)=>\{/);
@@ -102,20 +106,32 @@ test("power switch boots on user action, stores session, and turns off safely",(
     env.advanceTo(2400);
     assert.deepEqual(
       env.elements.get("monitorBootLines").children.map(x=>x.textContent),
-      BOOT_STEPS.map(x=>"> "+x.text)
+      BOOT_STEPS.filter(step=>step.at<=2400).map(step=>step.text)
     );
     assert.equal(ready,0);
-    env.advanceTo(2900);
+    env.advanceTo(BOOT_DURATION_MS-1);
+    assert.deepEqual(
+      env.elements.get("monitorBootLines").children.map(x=>x.textContent),
+      BOOT_STEPS.map(step=>step.text)
+    );
+    assert.equal(monitor.state,"booting");
+    env.advanceTo(BOOT_DURATION_MS);
     assert.equal(monitor.state,"on");
     assert.equal(ready,1);
     assert.equal(env.storage.get("td2000.monitor.booted"),"1");
     assert.equal(env.elements.get("terminalFrame").inert,false);
     assert.equal(env.elements.get("monitorPowerLabel").textContent,"SLUK");
     power.click();
-    assert.equal(monitor.state,"off");
-    assert.equal(shutdown,1);
+    assert.equal(monitor.state,"powering-down","Text must fade before glass goes black");
+    assert.equal(shutdown,1,"Playing audio stops immediately at switch-off");
+    assert.equal(power.disabled,true);
     assert.equal(env.storage.has("td2000.monitor.booted"),false);
     assert.equal(env.elements.get("terminalFrame").inert,true);
+    env.advanceTo(BOOT_DURATION_MS+POWER_DOWN_MS-1);
+    assert.equal(monitor.state,"powering-down");
+    env.advanceTo(BOOT_DURATION_MS+POWER_DOWN_MS);
+    assert.equal(monitor.state,"off");
+    assert.equal(power.disabled,false);
   }finally{env.restore()}
 });
 
@@ -157,5 +173,31 @@ test("late-eighties CRT font is loaded with Danish-language capable fallback",()
 test("boot runs silently with no synthetic audio dependency",()=>{
   const monitor=readFileSync("public/monitor.js","utf8");
   assert.doesNotMatch(monitor,/playPowerSound|AudioContext|boot-audio|stopBootAudio/);
-  assert.match(monitor,/schedule\(ready,2900\)/);
+  assert.ok(monitor.includes("schedule(ready,BOOT_DURATION_MS)"));
+  assert.equal(BOOT_DURATION_MS,5200);
+});
+
+test("startup diagnostic text resembles a serial-ROM terminal, not a marketing splash",()=>{
+  assert.equal(BOOT_STEPS.length,9);
+  assert.equal(BOOT_STEPS[0].text,"TD-2000 TERMINAL   ROM V1.7");
+  assert.ok(BOOT_STEPS.some(x=>x.text.includes("64 KB RAM")));
+  assert.ok(BOOT_STEPS.some(x=>x.text.includes("TEGNGENERATOR")));
+  assert.ok(BOOT_STEPS.some(x=>x.text.includes("TASTATUR")));
+  assert.ok(BOOT_STEPS.some(x=>x.text.includes("9600 8N1")));
+  assert.ok(BOOT_STEPS.some(x=>x.text.includes("VÆRTSSYSTEM")));
+  assert.ok(BOOT_STEPS.at(-1).at<BOOT_DURATION_MS);
+  assert.ok(css.includes("align-items:flex-start;justify-content:flex-start"));
+  assert.ok(css.includes("animation:boot-line-materialize .22s"));
+});
+
+test("reduced-motion users can turn monitor off immediately",()=>{
+  const env=fakeEnvironment({reduced:true,remembered:true});
+  try{
+    let shutdown=0;
+    const monitor=initMonitor({onShutdown:()=>shutdown++});
+    env.elements.get("monitorPower").click();
+    assert.equal(monitor.state,"off");
+    assert.equal(shutdown,1);
+    assert.equal(env.timers.size,0);
+  }finally{env.restore()}
 });
