@@ -381,14 +381,16 @@ function bind(){
   btn.disabled=true;
   try{
     await authorize();
-    let last="";
-    for(let i=0;i<2000;i++){
+    let last="",done=false;
+    // Keep a single manual run bounded so it does not exhaust D1's daily quota.
+    for(let i=0;i<30;i++){
       const r=await post("/api/archive/sync",{});
-      if(r.done){last="✓ Arkivet er færdigindekseret ("+(r.indexed_meetings||0)+" møder).";break;}
+      if(r.done){done=true;last="✓ Arkivet er færdigindekseret ("+(r.indexed_meetings||0)+" møder).";break;}
       last=(r.meeting||"") + ": "+r.processed+" / "+r.total+" taler behandlet";
       out.textContent=last;
       if(i%8===0)await new Promise(resolve=>setTimeout(resolve,1));
     }
+    if(!done)last+=" · Pause efter 30 batches for at skåne D1-kvoten. Tryk igen for at fortsætte.";
     out.textContent=last;
     await stats();await search();
   }catch(err){out.textContent="Import kunne ikke fortsætte: "+err.message;notice(err.message,true);}
