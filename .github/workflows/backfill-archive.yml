@@ -4,8 +4,8 @@ on:
   push:
     branches: [main]
     paths: ['.github/workflows/backfill-archive.yml']
-  schedule:
-    - cron: '17 4 * * *'
+  # Scheduled PDF backfill paused: only ingest meetings with verified original MP3.
+  # Keep workflow_dispatch for manual source diagnostics.
   workflow_dispatch:
 
 permissions:
