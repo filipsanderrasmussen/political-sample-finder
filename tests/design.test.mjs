@@ -75,6 +75,12 @@ test("audio playback, transcript reading and archive admin tools survive redesig
   assert.match(js,/class="link-btn listen-btn"/);
 });
 
+test("search audio accurately says that playback begins at the speech turn, not the keyword",()=>{
+  assert.match(js,/♫ Lyt fra indlæggets start/);
+  assert.match(js,/Afspilning fra indlæggets begyndelse\. Søgeordet kan forekomme senere\./);
+  assert.doesNotMatch(js,/♫ Lyt fra ca\./);
+});
+
 test("interface uses Danish terminal language without changing working search or playback",()=>{
   assert.match(html,/SYSTEM KLAR/);
   assert.match(html,/AFVENTER SØGNING/);
