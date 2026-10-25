@@ -59,8 +59,8 @@ if first:
     check={"name":"official MP3 proxy 1 KiB range","status":audio.get("status"),
            "bytes":len(audio.get("body") or b""),"content_range":audio.get("headers",{}).get("Content-Range"),
            "content_type":audio.get("headers",{}).get("Content-Type"),"magic":magic.hex()}
-    check["pass"]=audio.get("status")==206 and check["bytes"]==1024 and 
-        check["content_type"]=="audio/mpeg" and (magic.startswith(b"ID3") or magic[:1]==b"\xff")
+    check["pass"]=(audio.get("status")==206 and check["bytes"]==1024 and
+        check["content_type"]=="audio/mpeg" and (magic.startswith(b"ID3") or magic[:1]==b"\xff"))
     if not check["pass"]:check["error"]=audio.get("error","Range or MP3 signature invalid")
     REPORT["checks"].append(check)
 else:
