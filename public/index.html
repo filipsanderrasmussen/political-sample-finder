@@ -8,9 +8,10 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&display=swap">
 <link rel="stylesheet" href="/style.css">
 <link rel="preload" as="audio" href="/boot.mp3" type="audio/mpeg">
+<link rel="preload" as="audio" href="/turnoff.mp3" type="audio/mpeg">
 </head>
 <body>
-<div class="monitor-shell" id="monitorShell" data-power="off" aria-label="Taledatabase 2000 terminalmonitor" data-boot-sound-src="/boot.mp3">
+<div class="monitor-shell" id="monitorShell" data-power="off" aria-label="Taledatabase 2000 terminalmonitor" data-boot-sound-src="/boot.mp3" data-power-off-sound-src="/turnoff.mp3">
   <div class="monitor-screen" id="monitorScreen">
     <section class="monitor-boot" id="monitorBoot" aria-live="polite" aria-atomic="true" aria-label="Skærmens opstart">
       <div class="monitor-offline" id="monitorOffline" aria-hidden="true"></div>
@@ -53,7 +54,6 @@
     <div class="monitor-model" aria-hidden="true">DATATERMINAL <span>TD–2000</span></div>
     <div class="monitor-control-group">
       <span class="monitor-power-led" aria-hidden="true"></span>
-      <span class="monitor-power-caption" aria-hidden="true">STRØM</span>
       <button type="button" id="monitorPower" class="monitor-power-button" aria-label="Tænd skærmen" aria-pressed="false">
         <span class="monitor-power-icon" aria-hidden="true">⏻</span>
         <span id="monitorPowerLabel">TÆND</span>
