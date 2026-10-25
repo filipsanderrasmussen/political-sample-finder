@@ -2,6 +2,10 @@
 
 Søg i **rigtige folketingsreferater med verificeret original MP3**. Teksten er søgenøglen; lyden er produktet. Intet søgeresultat vises uden en kontrolleret lydkobling. Original lyd streames kun ved afspilning og kan klippes til 16-bit WAV.
 
+## Roadmap
+
+- **[ORDLAB 2000 – sproglig datamining og partiprofilering](https://github.com/filipsanderrasmussen/political-sample-finder/issues/1)** (idé): interaktiv ordsky/topord med danske stopord og lemmatisering; ord karakteristiske for hvert parti ud fra *relative* frekvenser, ikke kun rå antal; typiske fraser og senere udvikling over tid. Klik et ord for at finde de originale **lydverificerede** taleindlæg. Beregnes som batch-aggregater, med tydelig arkivperiode og forbehold for mangelfuld dækning. **Ikke implementeret endnu.**
+
 ## Cloudflare-udgaven v0.4
 
 - Worker API + D1 FTS5 til verificerede taler med lyd. Kun poster knyttet til `meeting_audio` returneres.
