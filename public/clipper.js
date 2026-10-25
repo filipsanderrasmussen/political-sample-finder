@@ -133,7 +133,18 @@ export async function captureWav({src,start,end,signal,onProgress=()=>{}}){
     const source=context.createMediaElementSource(media);
     source.connect(worklet);
     worklet.connect(context.destination);
-    worklet.port.postMessage({type:"start",frames:frameCount});
+    // Do not record the silent AudioContext frames while the remote MP3 seeks
+    // or buffers. Arm the worklet only when actual media playback begins.
+    let captureStarted=false;
+    media.addEventListener("playing",()=>{
+      if(!captureStarted){
+        captureStarted=true;
+        worklet.port.postMessage({type:"start",frames:frameCount});
+      }else worklet.port.postMessage({type:"resume"});
+    });
+    media.addEventListener("waiting",()=>{
+      if(captureStarted)worklet.port.postMessage({type:"pause"});
+    });
     // Audio is played through the worklet and heard while recording.
     await media.play();
     const timeout=new Promise((_,reject)=>{
@@ -242,13 +253,13 @@ export function initClipper({audio}){
   };
   id("clipExport").onclick=async()=>{
     if(controller){controller.abort();return;}
-    let filename;
+    let filename,token=null;
     try{
       if(!source)throw new Error("Vælg en optagelse først.");
       const {start,end,seconds}=validateClip(parseClipTime($start.value),parseClipTime($end.value),audio.duration);
       audio.pause();haltPreview();
       controller=new AbortController();
-      const token=controller;
+      token=controller;
       id("clipExport").textContent="■ AFBRYD";
       $message.textContent="OPTAGER UDKLIP – "+seconds.toFixed(2).replace(".",",")+" SEKUNDER…";
       filename="TD2000_"+new Date().toISOString().slice(0,10)+"_"+String(Math.floor(start*1000))+"-"+String(Math.floor(end*1000))+".wav";
@@ -262,11 +273,13 @@ export function initClipper({audio}){
       document.body.append(link);link.click();link.remove();
       setTimeout(()=>URL.revokeObjectURL(href),60000);
       $message.textContent="WAV KLAR · "+result.seconds.toFixed(3)+" sek. · "+Math.round(result.sampleRate/1000)+" kHz / 16-bit stereo.";
-    }catch(e){$message.textContent=e.message||"Kunne ikke gemme udklippet.";}
+    }catch(e){if(controller===token)$message.textContent=e.message||"Kunne ikke gemme udklippet.";}
     finally{
-      controller=null;
-      id("clipExport").disabled=false;
-      id("clipExport").textContent="↓ GEM WAV";
+      if(controller===token){
+        controller=null;
+        id("clipExport").disabled=false;
+        id("clipExport").textContent="↓ GEM WAV";
+      }
     }
   };
   return {open,close};
