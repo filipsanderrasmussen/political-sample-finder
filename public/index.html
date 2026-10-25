@@ -110,6 +110,40 @@
    </div>
    <p id="playerStatus" class="player-status" role="status"></p>
   </section>
+  <section class="clip-editor" aria-labelledby="clipTitle">
+   <div class="clip-header">
+    <div class="eyebrow" id="clipTitle">LYDKLIPPER // WAV-EKSPORT</div>
+    <span class="clip-length" id="clipLength">—</span>
+   </div>
+   <div class="clip-markers">
+    <div class="clip-marker">
+     <label for="clipIn">IN / START</label>
+     <div class="clip-time-line"><input id="clipIn" type="text" inputmode="text" value="00:00:00.000" aria-label="Starttid HH:MM:SS.mmm"><button id="clipSetIn" type="button" class="button outline">[ SÆT IN ]</button></div>
+     <div class="clip-nudges">
+      <button type="button" data-clip-target="in" data-clip-nudge="-0.1">−0,10</button>
+      <button type="button" data-clip-target="in" data-clip-nudge="-0.01">−0,01</button>
+      <button type="button" data-clip-target="in" data-clip-nudge="0.01">+0,01</button>
+      <button type="button" data-clip-target="in" data-clip-nudge="0.1">+0,10</button>
+     </div>
+    </div>
+    <div class="clip-marker">
+     <label for="clipOut">OUT / SLUT</label>
+     <div class="clip-time-line"><input id="clipOut" type="text" inputmode="text" value="00:00:08.000" aria-label="Sluttid HH:MM:SS.mmm"><button id="clipSetOut" type="button" class="button outline">[ SÆT OUT ]</button></div>
+     <div class="clip-nudges">
+      <button type="button" data-clip-target="out" data-clip-nudge="-0.1">−0,10</button>
+      <button type="button" data-clip-target="out" data-clip-nudge="-0.01">−0,01</button>
+      <button type="button" data-clip-target="out" data-clip-nudge="0.01">+0,01</button>
+      <button type="button" data-clip-target="out" data-clip-nudge="0.1">+0,10</button>
+     </div>
+    </div>
+   </div>
+   <div class="clip-actions">
+    <button id="clipPreview" type="button" class="button outline">▶ FORHØR UDKLIP</button>
+    <button id="clipExport" type="button" class="button primary">↓ GEM WAV</button>
+   </div>
+   <p id="clipStatus" class="clip-status" role="status" aria-live="polite">Vælg IN og OUT med afspilleren. Maksimum 30 sekunder.</p>
+   <p class="clip-disclaimer">16-bit WAV · Klippet optages i realtid uden at hente hele MP3-filen. Tidspositioner i referaterne er vejledende. Vurdér brugsrettigheder før offentliggørelse.</p>
+  </section>
   <details class="player-advanced">
    <summary>Rammer tidspunktet ved siden af? Justér her</summary>
    <div class="player-adjust">
