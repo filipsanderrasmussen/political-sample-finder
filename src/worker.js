@@ -1,6 +1,8 @@
 import { archiveManifest, archiveStatus, syncArchiveBatch } from "./archive.js";
 import { ensureSearchIndex } from "./search-index.js";
 import { relayOfficialAudio } from "./clip-source.js";
+import { syncXmlBatch, xmlArchiveStatus } from "./xml-archive.js";
+import { verifyKnownAudioBatch } from "./audio-registry.js";
 import offlinePodcastIndex from "./audio-index.json" with { type: "json" };
 // Political Sample Finder — Cloudflare Worker + D1.
 // Source-backed: results only come from imported Folketingstidende PDFs.
@@ -18,11 +20,18 @@ const SCHEMA = [
   "CREATE INDEX IF NOT EXISTS podcast_date_idx ON podcasts(date)",
   "CREATE TABLE IF NOT EXISTS favorites (speech_id TEXT PRIMARY KEY, added_at TEXT NOT NULL)",
   "CREATE TABLE IF NOT EXISTS archived_favorites (id TEXT PRIMARY KEY, meeting_id TEXT NOT NULL, source_date TEXT, speaker TEXT, clock TEXT, content TEXT, archived_at TEXT NOT NULL)",
+  "CREATE TABLE IF NOT EXISTS meeting_audio (meeting_id TEXT PRIMARY KEY, mp3_url TEXT NOT NULL, title TEXT NOT NULL, verified_at TEXT NOT NULL)",
   "CREATE TABLE IF NOT EXISTS app_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)"
 ].join(";\n") + ";";
 async function init(env) {
   if (!env.DB) throw new Error("D1-databasen DB mangler. Kontrollér Cloudflare-bindingen.");
-  if (!prepared) { await env.DB.exec(SCHEMA); prepared = true; }
+  if (!prepared) {
+    await env.DB.exec(SCHEMA);
+    const info=await env.DB.prepare("PRAGMA table_info(speeches)").all();
+    if(!(info.results||[]).some(c=>c.name==="party"))
+      await env.DB.prepare("ALTER TABLE speeches ADD COLUMN party TEXT").run();
+    prepared = true;
+  }
 }
 const headers = { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" };
 function json(data, status=200) { return new Response(JSON.stringify(data), {status,headers}); }
@@ -203,65 +212,64 @@ async function findSpeeches(env,params) {
   const q=(params.get("q")||"").trim().slice(0,160);
   const speaker=(params.get("speaker")||"").trim().slice(0,120);
   const fav=params.get("favorites")==="1";
-  if(!q&&!speaker&&!fav)return [];
-  const terms=searchTokens(q).slice(0,10),match=ftsQuery(terms,speaker);
-  // All text searches require the index. An incomplete index is never
-  // silently replaced with an expensive table scan.
+  const results=[];
+  const page=Math.min(199,Math.max(0,Number.parseInt(params.get("page")||"0",10)||0));
+  results.page=page;
+  results.has_more=false;
+  if(!q&&!speaker&&!fav)return results;
+  const terms=searchTokens(q).slice(0,10);
+  const match=ftsQuery(terms,speaker);
   if(match){
     const ready=await env.DB.prepare("SELECT value FROM app_meta WHERE key='fts_ready'").first();
-    if(ready?.value!=="1")throw new Error("Søgeindekset klargøres efter Cloudflares kvotenulstilling. Prøv igen senere.");
+    if(ready?.value!=="1")throw new Error("Søgeindekset klargøres. Prøv igen senere.");
   }
-  // FTS5 can match common words in nearly every speech. Materialize at most
-  // 1,000 candidate rowids before joining/sorting so row reads remain bounded.
-  const candidates=match?
-    "WITH hits AS MATERIALIZED (SELECT rowid FROM speech_fts WHERE speech_fts MATCH ? LIMIT 1000) ":"";
-  const base="SELECT s.id,s.idx,s.meeting_id,s.speaker,s.clock,s.content,s.page,m.date,m.title,m.meeting_no,m.samling,m.source_url,"+
-    "CASE WHEN f.speech_id IS NULL THEN 0 ELSE 1 END favorite "+
-    "FROM "+(match?"hits JOIN speeches s ON s.rowid=hits.rowid":"favorites favorite_index JOIN speeches s ON s.id=favorite_index.speech_id")+
-    " JOIN meetings m ON m.id=s.meeting_id LEFT JOIN favorites f ON f.speech_id=s.id ";
+  // Filters are applied INSIDE SQL, BEFORE LIMIT/OFFSET. No 1,000-row
+  // candidate cutoff that can hide relevant old or filtered matches.
   const conditions=["m.status='ready'",
     "NOT (m.samling='20251' AND m.date >= '2026-04-10' AND m.date < '2026-10-06')"];
+  const values=match?[match]:[];
+  const from=(params.get("from")||"").trim(),to=(params.get("to")||"").trim();
+  if(from && /^20\d\d$/.test(from)){conditions.push("m.date>=?");values.push(from+"-01-01");}
+  if(to && /^20\d\d$/.test(to)){conditions.push("m.date<?");values.push(String(Number(to)+1)+"-01-01");}
+  const parties=(params.get("party")||"").split(",").map(x=>x.trim().toUpperCase())
+     .filter(x=>/^[A-ZÆØÅ]{1,6}$/.test(x)).slice(0,12);
+  if(parties.length){
+    conditions.push("s.party IN ("+parties.map(() => "?").join(",")+")");
+    values.push(...parties);
+  }
   if(fav)conditions.push("f.speech_id IS NOT NULL");
-  const sql=candidates+base+" WHERE "+conditions.join(" AND ")+
-    " ORDER BY m.date DESC,s.clock ASC,s.idx ASC LIMIT 120";
-  const r=match?await env.DB.prepare(sql).bind(match).all():await env.DB.prepare(sql).all();
-  const rows=r.results||[];
-  const dbByDate=new Map(),missing=[];
-  for(const row of rows) {
-    if(!dbByDate.has(row.date)){
-      const p=row.date?await env.DB.prepare(
-        "SELECT title,mp3_url,episode_url,date,description,feed FROM podcasts WHERE date=? AND feed='Salen' LIMIT 25"
-      ).bind(row.date).all():{results:[]};
-      dbByDate.set(row.date,p.results||[]);
-    }
-    row.podcasts=findMeetingAudio(dbByDate.get(row.date),row);
-    row.favorite=!!row.favorite;
-    row.audio_source=row.podcasts.length?"indexed":"unmatched";
-    if(!row.podcasts.length && row.date){
-      row.podcasts=findMeetingAudio(offlinePodcastIndex,row);
-      if(row.podcasts.length)row.audio_source="official_rss_snapshot";
-      else missing.push(row);
-    }
-    // The filename encodes the actual MP3 start hour; avoid an expensive
-    // correlated MIN(clock) subquery for each individual search result.
-    const start=row.podcasts[0]?.mp3_url?.match(/\/\d{2}-\d{2}-\d{4}_(\d{2})-(\d{2})_salen\.mp3/i);
-    row.first_clock=start?start[1]+":"+start[2]:row.clock;
+  const sorting=params.get("sort")||"newest";
+  const order=sorting==="oldest"?"m.date ASC,s.clock ASC,s.idx ASC":
+              sorting==="relevance" && match?"bm25(speech_fts) ASC,m.date DESC,s.idx ASC":
+              "m.date DESC,s.clock ASC,s.idx ASC";
+  const fromSql=match?
+    "speech_fts JOIN speeches s ON s.rowid=speech_fts.rowid":
+    "favorites favorites_index JOIN speeches s ON s.id=favorites_index.speech_id";
+  if(match)conditions.unshift("speech_fts MATCH ?");
+  const sql="SELECT s.id,s.idx,s.meeting_id,s.speaker,s.party,s.clock,s.content,s.page,"+
+    "m.date,m.title,m.meeting_no,m.samling,m.source_url,"+
+    "a.mp3_url,a.title audio_title,CASE WHEN f.speech_id IS NULL THEN 0 ELSE 1 END favorite "+
+    "FROM "+fromSql+
+    " JOIN meetings m ON m.id=s.meeting_id "+
+    " JOIN meeting_audio a ON a.meeting_id=m.id "+
+    " LEFT JOIN favorites f ON f.speech_id=s.id "+
+    " WHERE "+conditions.join(" AND ")+" ORDER BY "+order+" LIMIT ? OFFSET ?";
+  const limit=25;
+  const query=env.DB.prepare(sql).bind(...values,limit+1,page*limit);
+  const rows=(await query.all()).results||[];
+  results.has_more=rows.length>limit;
+  for(const r of rows.slice(0,limit)){
+    const anchor=r.mp3_url?.match(/\/\d{2}-\d{2}-\d{4}_(\d{2})-(\d{2})_salen\.mp3/i);
+    r.first_clock=anchor?anchor[1]+":"+anchor[2]:r.clock.slice(0,5);
+    r.podcasts=[{mp3_url:r.mp3_url,title:r.audio_title,date:r.date,
+                 episode_url:r.mp3_url,feed:"Salen"}];
+    r.favorite=Boolean(r.favorite);
+    r.audio_source="verified_mp3";
+    delete r.mp3_url;
+    delete r.audio_title;
+    results.push(r);
   }
-  if(missing.length){
-    try{
-      const fromFeed=await liveSalenPodcasts();
-      for(const row of missing){
-        row.podcasts=findMeetingAudio(fromFeed,row);
-        row.audio_source=row.podcasts.length?"live":"not_in_feed";
-        const start=row.podcasts[0]?.mp3_url?.match(/\/\d{2}-\d{2}-\d{4}_(\d{2})-(\d{2})_salen\.mp3/i);
-        if(start)row.first_clock=start[1]+":"+start[2];
-      }
-    }catch(err){
-      console.warn("RSS live lookup unavailable:",String(err));
-      for(const row of missing)row.audio_source="feed_unavailable";
-    }
-  }
-  return rows;
+  return results;
 }
 // Nearby source transcript paragraphs, in their actual document order.
 // A timestamp belongs to the beginning of a speech, NOT to every sentence.
@@ -294,15 +302,21 @@ async function endpoint(request,env,url) {
       env.DB.prepare("SELECT id,title,date,source_url,speech_count FROM meetings WHERE status='ready' ORDER BY imported_at DESC LIMIT 15")
     ]);
     const archive=await archiveStatus(env).catch(err=>({archive_error:String(err)}));
+    const xmlArchive=await xmlArchiveStatus(env).catch(err=>({xml_archive_error:String(err)}));
+    const audioCount=await env.DB.prepare("SELECT COUNT(*) n FROM meeting_audio").first();
     return json({meetings:meetings.results[0].n,speeches:speeches.results[0].n,
       podcasts:podcasts.results[0].n,dated_podcasts:dated.results[0].n,recent_meetings:items.results,
       audio_archive_links:offlinePodcastIndex.length,
+      verified_audio_meetings:audioCount?.n||0,
       audio_archive_meetings:new Set(offlinePodcastIndex.map(x=>x.date+":"+x.meeting_no)).size,
-      ...archive,
+      ...archive,...xmlArchive,
       protected:!!env.APP_PASSWORD});
   }
-  if(method==="GET" && path==="/api/archive/status")return json(await archiveStatus(env));
-  if(method==="GET" && path==="/api/search")return json({results:await findSpeeches(env,url.searchParams)});
+  if(method==="GET" && path==="/api/archive/status")return json({...await archiveStatus(env),...await xmlArchiveStatus(env)});
+  if(method==="GET" && path==="/api/search"){
+    const rows=await findSpeeches(env,url.searchParams);
+    return json({results:rows,page:rows.page,has_more:rows.has_more,limit:25});
+  }
   if(method==="GET" && path==="/api/meeting/context")return json(await getTranscriptContext(env,url.searchParams.get("meeting_id"),url.searchParams.get("index")));
   if(method==="GET" && path==="/api/pdf"){
     const m=safeMeeting(url.searchParams.get("samling"),url.searchParams.get("number"));
@@ -329,7 +343,7 @@ async function endpoint(request,env,url) {
     return error("Log ind for at redigere favoritter eller importere data.",401);
   const data=await body(request);
   if(path==="/api/archive/sync"){
-    const batch=await syncArchiveBatch(env);
+    const batch=await syncXmlBatch(env);
     return json(batch);
   }
   if(path==="/api/import/start"){
@@ -419,11 +433,13 @@ export default {
       // as part of an interactive search. The index then stays in sync.
       try{await ensureSearchIndex(env);}
       catch(err){console.error("FTS5 index migration:",err);}
-      // Bound archive updates to keep daily D1 row-read/write quotas low.
+      // Audio-only: import ONLY verified official XML + MP3 pairs.
+      // Existing PDF-only archive is never bulk-imported by the scheduler.
       for(let i=0;i<3;i++){
-        const r=await syncArchiveBatch(env);
+        const r=await syncXmlBatch(env);
         if(r.done)break;
       }
+      await verifyKnownAudioBatch(env);
     })().catch(err=>console.error("Scheduled transcript import:",err)));
   }
 };
