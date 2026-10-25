@@ -30,6 +30,8 @@ jobs:
           python-version: '3.12'
       - name: Syntax control
         run: python -m py_compile scripts/build_xml_audio_archive.py
+      - name: Verify archive session selection and audio-only invariants
+        run: python3 -m unittest discover -s tests -p 'test_*.py'
       - name: Download verified official XML for MP3 meetings
         run: python -u scripts/build_xml_audio_archive.py --max-new 8 --max-checks 40
       - name: Commit only source-backed prepared meeting assets
