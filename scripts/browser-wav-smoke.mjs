@@ -19,7 +19,7 @@ try{
  await page.waitForFunction(()=>{
    const counter=document.querySelector("#statMeetings")?.textContent?.trim()||"";
    const coverage=document.querySelector("#archiveCoverage")?.textContent||"";
-   return /^\\d/.test(counter)&&coverage.includes("SØGBART NU");
+   return /^\d/.test(counter)&&coverage.includes("SØGBART NU");
  },null,{timeout:22000});
  report.archiveUi=await page.evaluate(async ()=>{
    const response=await fetch("/api/stats");
