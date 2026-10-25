@@ -1,0 +1,33 @@
+name: Test lydklip fra 2010
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/probe-early-audio.mjs'
+      - '.github/workflows/probe-early-audio.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify-old-audio:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate syntax
+        run: node --check scripts/probe-early-audio.mjs
+      - name: Probe early media sources and bounded WAV extraction
+        run: node scripts/probe-early-audio.mjs
+      - name: Upload diagnostic report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ft-2010-audio-result
+          path: ft-2010-audio-test.json
+          if-no-files-found: warn
