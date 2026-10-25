@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
+import vm from "node:vm";
 import {formatClipTime,parseClipTime,validateClip,encodeWav,MAX_CLIP_SECONDS} from "../public/clipper.js";
 
 const html=readFileSync("public/index.html","utf8");
@@ -70,7 +71,7 @@ test("clipper is inside current player, and preserves the existing playback work
   assert.match(js,/clipper\?\.open\(p\.mp3_url,position\)/);
   assert.match(js,/clipper\?\.close\(\)/);
   assert.match(processor,/registerProcessor\("taledatabase-recorder"/);
-  assert.match(processor,/this\.remaining-=frames/);
+  assert.match(processor,/this\.remaining-=n/);
 });
 
 test("sample recording is bounded and sent through a same-origin streaming URL",()=>{
@@ -81,4 +82,48 @@ test("sample recording is bounded and sent through a same-origin streaming URL",
   assert.match(source,/Math\.round\(\(end-start\)\*context\.sampleRate\)/);
   assert.match(source,/new Blob\(\[bytes\],\{type:"audio\/wav"\}\)/);
   assert.doesNotMatch(source,/ffmpeg|MediaRecorder|response\.arrayBuffer\(\)/);
+});
+
+test("AudioWorklet captures the exact requested number of PCM frames, not extra silence",()=>{
+  let Processor;
+  const events=[];
+  const fakeProcessor=class{
+    constructor(){this.port={postMessage:payload=>events.push(payload),onmessage:null}}
+  };
+  vm.runInNewContext(processor,{
+    AudioWorkletProcessor:fakeProcessor,Float32Array,
+    registerProcessor(name,klass){assert.equal(name,"taledatabase-recorder");Processor=klass}
+  });
+  const node=new Processor();
+  const samples=new Float32Array([.1,.2,.3,.4,.5]);
+  const other=new Float32Array([.9,.8,.7,.6,.5]);
+  node.port.onmessage({data:{type:"start",frames:3}});
+  const output=[[new Float32Array(5),new Float32Array(5)]];
+  node.process([[samples,other]],output);
+  assert.equal(events.length,2);
+  assert.equal(events[0].type,"frames");
+  assert.equal(new Float32Array(events[0].left).length,3);
+  assert.ok(Math.abs(new Float32Array(events[0].left)[2]-.3)<1e-6);
+  assert.ok(Math.abs(new Float32Array(events[0].right)[0]-.9)<1e-6);
+  assert.equal(events[1].type,"complete");
+  assert.deepEqual(Array.from(output[0][0]),Array.from(samples));
+  node.process([[samples]],output);
+  assert.equal(events.length,2,"Capture stops after the selected sample count");
+});
+
+test("AudioWorklet does not write samples during source buffering",()=>{
+  let Processor;const events=[];
+  vm.runInNewContext(processor,{
+    AudioWorkletProcessor:class{constructor(){this.port={postMessage:x=>events.push(x)}}},
+    Float32Array,registerProcessor(_,klass){Processor=klass}
+  });
+  const node=new Processor();
+  node.port.onmessage({data:{type:"start",frames:2}});
+  node.port.onmessage({data:{type:"pause"}});
+  node.process([[new Float32Array([.5,.8])]],[[new Float32Array(2)]]);
+  assert.equal(events.length,0);
+  node.port.onmessage({data:{type:"resume"}});
+  node.process([[new Float32Array([.5,.8])]],[[new Float32Array(2)]]);
+  assert.equal(events[0].type,"frames");
+  assert.equal(events[1].type,"complete");
 });
