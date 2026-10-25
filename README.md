@@ -1,6 +1,6 @@
 # Political Sample Finder
 
-Find citater fra **rigtige folketingsreferater**, se taler og klokkeslæt, og åbn den mulige originaloptagelse som MP3. Ingen opdigtede søgeresultater og ingen automatisk MP3-klipning.
+Find citater fra **rigtige folketingsreferater**, se taler og klokkeslæt, og åbn den mulige originaloptagelse som MP3. Ingen opdigtede søgeresultater. Der er nu en integreret lydklipper, der eksporterer 16-bit WAV.
 
 ## Cloudflare-udgaven v0.3
 
@@ -19,6 +19,18 @@ Find citater fra **rigtige folketingsreferater**, se taler og klokkeslæt, og å
 6. Åbn Workeren: **Settings → Variables and Secrets → Add → Secret**. Navn: **APP_PASSWORD**. Værdi: en selvvalgt stærk adgangskode (mindst 12 tegn). Gem med **Deploy**. Læg aldrig adgangskoden i GitHub.
 7. Åbn den nye workers.dev-adresse, vælg **Indlæs data** og skriv adgangskoden. Prøv samling **20251**, møde **41**. Hvis server-fetch af PDF fejler, download original-PDF'en og vælg **Indlæs valgt PDF**.
 8. Vælg **Opdatér lydindeks**, feed **Folketingssalen**, og søg f.eks. efter **ansvar**.
+
+## Lydklipper / TD-2000
+
+1. Find et reelt citat, og åbn **Original lyd**.
+2. Find passagen ved at bruge lydafspilleren og ±15 sek. spring.
+3. Klik **SÆT IN** og **SÆT OUT**, og justér præcist med ±0,01 / ±0,10 sek. eller skriv tidskoder som `01:02:03.450`.
+4. Klik **FORHØR UDKLIP**. Højst 30 sekunder.
+5. Klik **GEM WAV**. Den originale MP3 streames via en sikker, same-origin Range-proxy; browseren optager kun det valgte tidsrum i realtid og gemmer stereo PCM i en WAV-fil.
+
+Kliplængden fastsættes i hele PCM-frames ved browserens samplefrekvens. Positionen ved start af en komprimeret MP3 afhænger dog af browserens dekoder/seek og kan variere lidt; referatets oprindelige klokkeslæt er kun et cirka-anker. **Kontrollér altid præcise klipgrænser ved at lytte.** Forhør bruger den almindelige afspillers tidsstyring og er også vejledende. En streamingfejl må ikke få serveren til at hente vilkårlige fremmede URL'er: proxyen tillader kun Folketingets Kaltura MP3-mønster. En eksport på 10 sekunder tager omtrent 10 sekunder.
+
+Lydens kilde er Folketinget. Rettigheder til offentliggørelse og musikalsk genbrug skal vurderes særskilt. Der foretages ingen lydoptagelse på serveren, og WAV-filen genereres i browseren.
 
 ## Vigtige begrænsninger
 
