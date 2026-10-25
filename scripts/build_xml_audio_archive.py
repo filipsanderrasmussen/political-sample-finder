@@ -71,11 +71,16 @@ def main():
     print("Official MP3 entries:",len(records),"XML indexed:",len(existing),flush=True)
     # Scan newest first, then extend backwards across verified feed coverage.
     records=sorted(records,key=lambda x:(x.get("date",""),x.get("meeting_no",0)),reverse=True)
-    checks=new=0
+    cursor_path=ROOT/"scripts/xml-audio-position.json"
+    cursor=json.loads(cursor_path.read_text("utf-8")) if cursor_path.exists() else {"next":0}
+    start=(int(cursor.get("next",0))%len(records)) if records else 0
+    rotated=records[start:]+records[:start]
+    checks=new=scanned=0
     ftp=None;current=None
     try:
-        for a in records:
+        for a in rotated:
             if new>=opt.max_new or checks>=opt.max_checks:break
+            scanned+=1
             date=a.get("date","")
             number=a.get("meeting_no")
             url=a.get("mp3_url","")
@@ -129,7 +134,10 @@ def main():
                 break
         manifest.sort(key=lambda x:(x["date"],x["id"]),reverse=True)
         MANIFEST.write_text(json.dumps(manifest,ensure_ascii=False,separators=(",",":"))+"\n","utf-8")
-        print("NEW",new,"CHECKS",checks,"MANIFEST",len(manifest),flush=True)
+        next_position=(start+scanned)%len(records) if records else 0
+        cursor_path.write_text(json.dumps({"next":next_position},indent=2)+"\n","utf-8")
+        print("NEW",new,"CHECKS",checks,"SCANNED",scanned,
+              "NEXT",next_position,"MANIFEST",len(manifest),flush=True)
     finally:
         if ftp is not None:
             try:ftp.quit()
