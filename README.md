@@ -1,10 +1,18 @@
-# Political Sample Finder
+# TALEDATABASE 2000 (Political Sample Finder)
 
 Søg i **rigtige folketingsreferater med verificeret original MP3**. Teksten er søgenøglen; lyden er produktet. Intet søgeresultat vises uden en kontrolleret lydkobling. Original lyd streames kun ved afspilning og kan klippes til 16-bit WAV.
 
+## Projektets afgrænsning (besluttet 25. oktober 2026)
+
+- **Lydsøgning:** Fokusér på Folketingets verificerede originale MP3-arkiv **fra 8. november 2024 og fremad**. Indlæs hele den dokumenterede periode med XML-referater, taler, talere, partier og tidsankre – kun når den tilhørende MP3 er bekræftet.
+- **Ingen 2010-lydjagt:** Vi bruger ikke ressourcer på at finde/konvertere ældre videooptagelser til TALEDATABASE 2000. Vi kan udvide grænsen, hvis originale, direkte lydfiler senere bliver dokumenteret, men det er ikke en opgave nu.
+- **Særskilt tekstprojekt:** Ordskyer, hyppigste ord, fraser, historisk tekstanalyse og partisammenligninger placeres i et senere selvstændigt projekt, foreløbigt **ORDLAB 2000**. Det skal kunne søge i historiske referater uden krav om lyd, evt. fra 2010 hvis datakilder og dækningsgrad kan verificeres.
+- **Mulig kobling:** Tekstprojektet kan linke til TALEDATABASE 2000, hvis der også findes et verificeret matchende lydklip. Intet krav om fælles database eller identisk dækningsperiode.
+
+
 ## Roadmap
 
-- **[ORDLAB 2000 – sproglig datamining og partiprofilering](https://github.com/filipsanderrasmussen/political-sample-finder/issues/1)** (idé): interaktiv ordsky/topord med danske stopord og lemmatisering; ord karakteristiske for hvert parti ud fra *relative* frekvenser, ikke kun rå antal; typiske fraser og senere udvikling over tid. Klik et ord for at finde de originale **lydverificerede** taleindlæg. Beregnes som batch-aggregater, med tydelig arkivperiode og forbehold for mangelfuld dækning. **Ikke implementeret endnu.**
+- **[ORDLAB 2000 – selvstændigt fremtidigt tekstprojekt](https://github.com/filipsanderrasmussen/political-sample-finder/issues/1)**: ordskyer, sammenligning af partiers karakteristiske ord, fraser og historiske trends; **kræver ikke MP3** og ligger uden for denne apps scope. Link til lydsøgning er en valgfri integration, ikke en afhængighed.
 
 ## Cloudflare-udgaven v0.4
 
