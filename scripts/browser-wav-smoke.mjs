@@ -9,13 +9,14 @@ const report={time:new Date().toISOString(),app:APP,source:"Official Folketinget
 let browser;
 try{
  browser=await chromium.launch({headless:true,args:["--autoplay-policy=no-user-gesture-required","--no-sandbox"]});
- const context=await browser.newContext({permissions:[]});
+ const context=await browser.newContext({permissions:[],reducedMotion:"reduce"});
  const page=await context.newPage();
  page.setDefaultTimeout(65000);
  const errors=[];
  page.on("pageerror",e=>errors.push(String(e).slice(0,250)));
  const reply=await page.goto(APP,{waitUntil:"domcontentloaded",timeout:40000});
  report.http=reply?.status();
+ await page.locator("#monitorPower").click();
  await page.waitForFunction(()=>{
    const counter=document.querySelector("#statMeetings")?.textContent?.trim()||"";
    const coverage=document.querySelector("#archiveCoverage")?.textContent||"";
