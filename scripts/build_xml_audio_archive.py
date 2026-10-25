@@ -99,6 +99,10 @@ def main():
                 try:
                     raw=download_xml(ftp,remote)
                     speeches=xml_speeches(raw,session,number,date)
+                    pending=sum(1 for row in speeches if re.search(
+                        r"(?:talen er under udarbejdelse|afventer korrektur)",row["content"],re.I))
+                    if pending:
+                        raise ValueError(f"{pending}/{len(speeches)} speech segments are pending editorial completion")
                 except (ftplib.error_perm,ValueError,ET.ParseError,UnicodeError) as e:
                     print("Skip",mid,"invalid or missing XML:",str(e)[:90],flush=True)
                     continue
