@@ -35,6 +35,30 @@ try{
      meetingCount:stats.verified_audio_meetings,speechCount:stats.audio_speeches
    };
  });
+ report.filtersDesktop=await page.evaluate(()=>{
+   const ids=["speaker","partySummary","yearFrom","yearTo","sortResults"];
+   const blocks=ids.map(id=>{
+     const r=document.getElementById(id).getBoundingClientRect();
+     return {id,top:Math.round(r.top),left:Math.round(r.left),
+             right:Math.round(r.right),height:Math.round(r.height)};
+   });
+   return {blocks,aligned:Math.max(...blocks.map(x=>x.top))-Math.min(...blocks.map(x=>x.top))<=4,
+      sameHeight:Math.max(...blocks.map(x=>x.height))-Math.min(...blocks.map(x=>x.height))<=2};
+ });
+ await page.setViewportSize({width:460,height:820});
+ report.filtersMobile=await page.evaluate(()=>{
+   const parent=document.querySelector(".search-options").getBoundingClientRect();
+   const ids=["speaker","partySummary","yearFrom","yearTo","sortResults"];
+   const blocks=ids.map(id=>{
+     const r=document.getElementById(id).getBoundingClientRect();
+     return {id,top:Math.round(r.top),left:Math.round(r.left),
+       right:Math.round(r.right)};
+   });
+   return {blocks,withinFrame:blocks.every(x=>x.left>=parent.left-3&&x.right<=parent.right+3),
+     responsiveOrder:blocks[0].top<blocks[1].top&&blocks[1].top<blocks[2].top&&
+        Math.abs(blocks[2].top-blocks[3].top)<=3&&blocks[3].top<blocks[4].top};
+ });
+ await page.setViewportSize({width:1280,height:720});
  report.export=await page.evaluate(async src=>{
    const {captureWav}=await import("/clipper.js");
    const started=performance.now();
@@ -59,7 +83,9 @@ try{
    &&report.archiveUi.labels.includes("ARKIVETS ÅR")
    &&report.archiveUi.coverage.includes("IKKE KOMPLET DÆKNING")
    &&report.archiveUi.meetings===report.archiveUi.meetingCount.toLocaleString("da-DK")
-   &&report.archiveUi.speech_turns===report.archiveUi.speechCount.toLocaleString("da-DK");
+   &&report.archiveUi.speech_turns===report.archiveUi.speechCount.toLocaleString("da-DK")
+   &&report.filtersDesktop.aligned&&report.filtersDesktop.sameHeight
+   &&report.filtersMobile.withinFrame&&report.filtersMobile.responsiveOrder;
  await context.close();
 }catch(e){report.error=String(e).slice(0,900)}
 finally{await browser?.close().catch(()=>{});}
