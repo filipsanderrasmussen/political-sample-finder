@@ -86,6 +86,10 @@ test("real-world monitor is edge-to-edge with a physical switch; dialogs remain 
   assert.ok(css.includes('data-power="off"]::after{display:none}'),"Off-state scanlines disappear");
   assert.ok(css.includes('data-power="powering-down"] .terminal-frame'),"Screen stays present while fading");
   assert.ok(css.includes("@keyframes crt-warm-up"));
+  assert.match(css,/\.monitor-shell\[data-power="booting"\] \.monitor-boot\{\s*animation:crt-warm-up 1\.45s ease-out \.65s both;/,
+    "Cold boot must hold its first, fully transparent frame for 650ms before text appears");
+  assert.match(css,/@keyframes crt-warm-up\{\s*0%\{opacity:0;/,
+    "The boot's delayed first frame must keep green text completely invisible");
   assert.ok(css.includes("@keyframes crt-cool-down"));
   assert.ok(css.includes("filter:blur(15px) brightness(.15)"));
   assert.ok(css.includes("filter:blur(14px) brightness(.10)"));
