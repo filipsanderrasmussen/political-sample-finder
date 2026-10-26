@@ -342,7 +342,7 @@ body::after{display:none}
    "both" holds the zero-opacity first frame throughout the delay.
    The nine-second boot schedule and complete MP3 are unchanged. */
 .monitor-shell[data-power="booting"] .monitor-boot{
-  animation:crt-warm-up 1.45s ease-out .65s both;
+  animation:crt-warm-up 1.45s ease-out 1s both;
 }
 .monitor-shell[data-power="on"] .terminal-frame{
   animation:crt-warm-up .95s ease-out both;
