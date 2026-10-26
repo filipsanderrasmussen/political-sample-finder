@@ -337,9 +337,12 @@ body::after{display:none}
   box-shadow:0 0 0 5px #282828,0 0 0 7px #1d1d1d,inset 0 0 80px #000;
 }
 .monitor-shell[data-power="off"]::after{display:none}
-/* A cold tube takes a moment to brighten and sharpen; no fake scan collapse. */
+/* Cold CRT: the sound begins immediately on click, while the glass remains
+   black for 650 ms before the existing green-text warm-up fade starts.
+   "both" holds the zero-opacity first frame throughout the delay.
+   The nine-second boot schedule and complete MP3 are unchanged. */
 .monitor-shell[data-power="booting"] .monitor-boot{
-  animation:crt-warm-up 1.45s ease-out both;
+  animation:crt-warm-up 1.45s ease-out .65s both;
 }
 .monitor-shell[data-power="on"] .terminal-frame{
   animation:crt-warm-up .95s ease-out both;
