@@ -43,9 +43,9 @@ try{
     };
   });
   report.immediate=await snapshot();
-  await page.waitForTimeout(390);
+  await page.waitForTimeout(650);
   report.blackHold=await snapshot();
-  await page.waitForTimeout(1010);
+  await page.waitForTimeout(850);
   report.fade=await snapshot();
   report.audio=await page.evaluate(()=>{
     const checks=window.__bootCheck;
@@ -59,10 +59,10 @@ try{
   report.ok=report.http===200
     &&report.immediate.state==="booting"
     &&report.immediate.opacity===0
-    &&report.blackHold.elapsedMs<650
+    &&report.blackHold.elapsedMs<1000
     &&report.blackHold.opacity===0
     &&report.blackHold.lines>=1
-    &&report.fade.elapsedMs>=650
+    &&report.fade.elapsedMs>=1000
     &&report.fade.opacity>0.02
     &&report.fade.state==="booting"
     &&report.audio.playCalls===1
