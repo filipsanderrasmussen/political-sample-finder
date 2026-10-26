@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'scripts/browser-wav-smoke.mjs'
+      - 'scripts/browser-boot-smoke.mjs'
       - '.github/workflows/browser-wav-smoke.yml'
 permissions:
   contents: read
@@ -21,6 +22,8 @@ jobs:
         run: |
           npm install --no-save --ignore-scripts --no-audit --no-fund playwright
           npx playwright install chromium --with-deps
+      - name: Test cold CRT boot and original audio timing
+        run: node scripts/browser-boot-smoke.mjs
       - name: Test actual MP3 seek and 1s WAV export
         run: node scripts/browser-wav-smoke.mjs
       - name: Save diagnostic only, no audio
@@ -28,5 +31,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: browser-wav-diagnostic
-          path: browser-wav-smoke.json
+          path: |
+            browser-wav-smoke.json
+            browser-boot-smoke.json
           if-no-files-found: warn
