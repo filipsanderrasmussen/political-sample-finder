@@ -68,13 +68,20 @@ function mins(x){const m=/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(x||"");return m
 function offset(v){if(v===null||v<0||!Number.isFinite(v))return "Ukendt";v=Math.floor(v);return [Math.floor(v/3600),Math.floor(v%3600/60),v%60].map(n=>String(n).padStart(2,"0")).join(":");}
 function anchor(url){try{return localStorage.getItem("psf.anchor:"+url);}catch{return null;}}
 function storeAnchor(url,val){try{localStorage.setItem("psf.anchor:"+url,val);}catch{}}
+function manualAnchor(row,p){
+ // Previous releases saved the UNCHANGED file start when the user simply
+ // clicked play/seek. Such legacy entries must not suppress recess offsets.
+ const saved=anchor(p.mp3_url),original=mins(row.first_clock||row.clock),candidate=mins(saved);
+ return candidate!==null&&original!==null&&candidate!==original?saved:null;
+}
 function recessOffset(row,p){
- // A manually adjusted MP3 start overrides the inferred break correction.
- return anchor(p.mp3_url)?0:Math.max(0,Number(row.pause_seconds)||0);
+ // Only a genuinely different, deliberately chosen recording start overrides
+ // the meeting's documented recesses.
+ return manualAnchor(row,p)?0:Math.max(0,Number(row.pause_seconds)||0);
 }
 function seconds(row,p){
- const a=mins(row.clock),b=mins(anchor(p.mp3_url)||row.first_clock||row.clock);
- return a===null||b===null?null:(a-b)*60-recessOffset(row,p);
+ const a=mins(row.clock),b=mins(manualAnchor(row,p)||row.first_clock||row.clock);
+ return a===null||b===null?null:Math.round((a-b)*60)-recessOffset(row,p);
 }
 function wordPlayback(row,p,q,mode="start"){
  const start=seconds(row,p);
@@ -111,9 +118,11 @@ function render(){
   const listen=podcasts.slice(0,3).map((a,i)=>{
    const target=wordPlayback(r,a,state.q,"word");
    const mode=target.estimate?"word":"start";
+   const custom=!!manualAnchor(r,a),paused=recessOffset(r,a);
    return '<button class="link-btn listen-btn" data-listen="'+esc(r.id)+'" data-ix="'+i+'" data-mode="'+mode+'">'+
     (target.estimate?'♫ TEST: lyt nær søgeordet':recessOffset(r,a)>0?'♫ Lyt med pausekorrektion':'♫ Lyt ved vejledende start')+
     ' · ca. '+esc(offset(target.position))+
+    (custom?' · manuel start':paused?' · −'+esc(offset(paused))+' pause':'')+
     (podcasts.length>1?" · kandidat "+(i+1):"")+'</button>';
   }).join("");
   return '<article class="result"><div class="result-terminal-top"><span class="result-index">#'+String(i+1).padStart(3,"0")+'</span><span>// REFERATFUND</span></div><div class="result-meta"><b class="speaker-name">'+esc(speaker)+'</b><span class="date">'+dateLabel(r.date)+' · Møde '+r.meeting_no+'</span></div>'+
@@ -218,14 +227,16 @@ function openPlayer(row,p,mode="start"){
  $("playerSpeaker").textContent=suspect?"Taler ikke sikkert identificeret":speaker;
  $("playerContext").textContent="Møde "+row.meeting_no+" · "+dateLabel(row.date)+" · indlægget begynder kl. "+row.clock;
  $("playerDuration").textContent="";
- $("playerStart").value=anchor(p.mp3_url)||row.first_clock||row.clock;
+ $("playerStart").value=manualAnchor(row,p)||row.first_clock||row.clock;
  $("playerMp3Link").href=p.mp3_url;
  $("transcriptPdf").href=row.source_url+"#page="+Number(row.page||1);
  $("playerStatus").textContent=target.estimate
   ?"TEST: Pausekorrektion + ordplacering. Starter cirka 6 sekunder før det beregnede søgeord. Positionen er vejledende – brug ±15 sek. til at finjustere."
-  :recessOffset(row,p)>0
-   ?"Trukket "+offset(recessOffset(row,p))+" registreret mødepause fra tidspositionen ("+row.pause_count+" pause(r)). Stadig vejledende: MP3'en er ikke synkroniseret sekundpræcist."
-   :"OBS: Lyd og referat er ikke synkroniseret. Mødepauser kan forskyde starttidspunktet betydeligt. Brug MP3-tidslinjen til at finde indlægget.";
+  :manualAnchor(row,p)
+   ?"Manuel MP3-start er aktiv. Automatisk pausekorrektion er slået fra for denne optagelse; vælg filens oprindelige startklokkeslæt under Justér for at bruge pausekorrektion."
+   :recessOffset(row,p)>0
+    ?"Trukket "+offset(recessOffset(row,p))+" registreret mødepause fra tidspositionen ("+row.pause_count+" pause(r)). Stadig vejledende: MP3'en er ikke synkroniseret sekundpræcist."
+    :"OBS: Lyd og referat er ikke synkroniseret. Mødepauser kan forskyde starttidspunktet betydeligt. Brug MP3-tidslinjen til at finde indlægget.";
  $("playerDialog").querySelector(".player-advanced").open=false;
  const beginning=calcOffset();
  const position=beginning!==null&&beginning>=0?beginning+(target.estimate?.seconds||0):beginning;
@@ -253,7 +264,7 @@ function openPlayer(row,p,mode="start"){
 function calcOffset(){
  if(!state.playing)return null;
  const a=mins(state.playing.row.clock),b=mins($("playerStart").value);
- const diff=a===null||b===null?null:(a-b)*60-recessOffset(state.playing.row,state.playing.p);
+ const diff=a===null||b===null?null:Math.round((a-b)*60)-recessOffset(state.playing.row,state.playing.p);
  $("playerOffset").textContent=diff!==null&&diff<0?"Før lydstart":offset(diff);
  return diff;
 }

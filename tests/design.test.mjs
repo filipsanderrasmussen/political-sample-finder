@@ -97,10 +97,14 @@ test("audio playback, transcript reading and archive admin tools survive redesig
 
 test("recorded meeting recesses correct approximate playback without overriding manual timing",()=>{
   assert.match(js,/function recessOffset\(row,p\)/);
-  assert.match(js,/anchor\(p\.mp3_url\)\?0:/);
+  assert.match(js,/function manualAnchor\(row,p\)/);
+  assert.match(js,/candidate!==null&&original!==null&&candidate!==original/);
+  assert.match(js,/manualAnchor\(row,p\)\?0:/);
+  assert.match(js,/manuel start/);
+  assert.match(js,/pause\x27/);
   assert.match(js,/Lyt med pausekorrektion/);
   assert.match(js,/Trukket .*registreret mødepause/);
-  assert.match(js,/const diff=a===null\|\|b===null\?null:\(a-b\)\*60-recessOffset/);
+  assert.match(js,/const diff=a===null\|\|b===null\?null:Math\.round\(\(a-b\)\*60\)-recessOffset/);
   assert.doesNotMatch(js,/storeAnchor\(state\.playing\.p\.mp3_url,\$\("playerStart"\)\.value\);\s*state\.playing\.estimated=false/);
 });
 
