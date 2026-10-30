@@ -15,7 +15,6 @@ export const BOOT_STEPS=Object.freeze([
   {at:3000, text:"SERIEL PORT A    9600 8N1"},
   {at:3700, text:"SPOOLER INITIALISERES .. OK"},
   {at:4510, text:"SPOOL-BUFFER ......... 16 KB"},
-  {at:5210, text:"SPOOLKØ ............ 0 JOBS"},
   {at:6080, text:"ARKIVDREV .............. OK"},
   {at:6870, text:"FORBINDELSE ............ OK"},
   {at:7800, text:"SØGEINDEKS ............ KLAR"},
