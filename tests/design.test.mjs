@@ -104,7 +104,7 @@ test("recorded meeting recesses correct approximate playback without overriding 
   assert.match(js,/pause\x27/);
   assert.match(js,/Lyt med pausekorrektion/);
   assert.match(js,/Trukket .*registreret mødepause/);
-  assert.match(js,/const diff=a===null\|\|b===null\?null:\(a-b\)\*60-recessOffset/);
+  assert.match(js,/const diff=a===null\|\|b===null\?null:Math\.round\(\(a-b\)\*60\)-recessOffset/);
   assert.doesNotMatch(js,/storeAnchor\(state\.playing\.p\.mp3_url,\$\("playerStart"\)\.value\);\s*state\.playing\.estimated=false/);
 });
 
