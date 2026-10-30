@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 import {searchTokens,matchesSearchTerms,ftsQuery,findSpeeches,periodBoundary} from "../src/worker.js";
+import { inferredParty, ministerPartyPredicate } from "../src/minister-parties.js";
 
 test("ulv matches a complete word, not pulver or ulven",()=>{
   assert.deepEqual(searchTokens("ULV, angst!"),["ulv","angst"]);
@@ -46,7 +47,48 @@ test("FTS5 keeps word matching, filters before pagination and joins only verifie
   assert.match(sql,/m\.date<\?/);
   assert.match(sql,/LIMIT \? OFFSET \?/);
   assert.ok(!sql.includes("LIMIT 1000"));
-  assert.deepEqual(params.at(-1),['content:"ulv"',"2025-01-01","2027-01-01","S","V","% (S)","% (V)",26,25]);
+  assert.deepEqual(params.at(-1),['content:"ulv"',"2025-01-01","2027-01-01","S","V","% (S)","% (V)",...ministerPartyPredicate(["S","V"]).values,26,25]);
+});
+
+test("ministers with missing XML group are filtered by historically correct affiliation",async()=>{
+  const actualMeeting=JSON.parse(readFileSync("public/archive/xml/20252_M19.json","utf8"));
+  assert.equal(actualMeeting.date,"2026-08-26");
+  const speech=actualMeeting.speeches.find(s=>s.content.toLowerCase().includes("problemulv"));
+  assert.ok(speech,"The original August 2026 problemulv speech must exist in the archive");
+  assert.equal(speech.speaker,"Christian Rabjerg Madsen");
+  assert.equal(speech.party,""); // Folketing XML omits ministers' affiliations.
+  assert.equal(inferredParty(speech.speaker,actualMeeting.date),"S");
+  assert.equal(inferredParty("Christina Egelund",actualMeeting.date),"M");
+  assert.equal(inferredParty("Samira Nawa",actualMeeting.date),"RV");
+  assert.equal(inferredParty("Pia Olsen Dyhr",actualMeeting.date),"SF");
+  assert.equal(inferredParty("Christian Rabjerg Madsen","2025-03-01"),null);
+  assert.equal(inferredParty("Christina Egelund","2025-03-01"),"M");
+  assert.equal(inferredParty("En ukendt minister",actualMeeting.date),null);
+  const sample={...speech,id:actualMeeting.id+":12",idx:12,meeting_id:actualMeeting.id,
+    date:actualMeeting.date,meeting_no:actualMeeting.meeting_no,samling:"20252",
+    source_url:"https://www.ft.dk",favorite:0,
+    mp3_url:"https://cdnapi.kaltura.com/p/2158211/sp/0/playManifest/entryId/1_jb8pshgl/protocol/http/flavorParamIds/0/format/url/26-08-2026_11-00_salen.mp3",
+    audio_title:"Salen"};
+  const sqls=[],bindings=[];
+  const db={prepare(sql){
+    sqls.push(sql);
+    return {
+      bind(...a){bindings.push(a);return this;},
+      async first(){return {value:"1"};},
+      async all(){return {results:sql.includes("JOIN meeting_audio")?[sample]:[]};}
+    };
+  }};
+  const found=await findSpeeches({DB:db},new URLSearchParams({q:"problemulv",party:"S"}));
+  assert.equal(found.length,1);
+  assert.equal(found[0].party,"S");
+  assert.equal(found[0].speaker,"Christian Rabjerg Madsen");
+  const sql=sqls.find(x=>x.includes("JOIN meeting_audio"));
+  assert.ok(sql);
+  assert.match(sql,/m\.date>=\?/);
+  assert.match(sql,/s\.speaker IN \(/);
+  assert.ok(bindings.at(-1).includes("Christian Rabjerg Madsen"));
+  assert.ok(bindings.at(-1).includes("2026-06-03"));
+  assert.ok(!ministerPartyPredicate(["DF"]).values.includes("Christian Rabjerg Madsen"));
 });
 
 test("month boundaries include the whole selected final month and handle December rollover",()=>{
