@@ -28,27 +28,26 @@ test("phosphor terminal homepage keeps search controls and no marketing hero",()
   assert.doesNotMatch(html,/Find ordene\.|Hør stemmen\.|Søg i Folketingets referater, find omtrent|SYSTEM ONLINE|READY|AWAITING INPUT|SAMPLE FINDER/);
 });
 
-test("compact month range uses two native inputs inside the existing responsive filter grid",()=>{
+test("focused search shows speaker and party filters but no date selection",()=>{
   assert.match(html,/class="filter-toolbar"/);
   assert.doesNotMatch(html,/AFGRÆNS SØGNINGEN/);
-  for(const cls of ["filter-speaker","filter-party","filter-month-from","filter-month-to"]){
+  for(const cls of ["filter-speaker","filter-party"]){
     assert.match(html,new RegExp('class="filter-field '+cls+'"'));
   }
   assert.match(html,/class="search-filters"/);
-  assert.doesNotMatch(html,/id="sortResults"|SORTERING|Nyeste først|Ældste først/);
-  assert.ok(!js.includes('$("sortResults")'));
+  assert.match(html,/id="resetFilters"/);
+  assert.match(html,/id="speaker"/);
   assert.match(html,/id="partySummary"[^>]*>Alle partier<\/summary>/);
-  assert.match(html,/id="monthFrom" type="month" min="1900-01" max="2099-12"/);
-  assert.match(html,/id="monthTo" type="month" min="1900-01" max="2099-12"/);
-  assert.match(html,/FRA MÅNED/);
-  assert.match(html,/TIL MÅNED/);
-  assert.doesNotMatch(html,/id="yearFrom"|id="yearTo"|FRA ÅR|TIL ÅR/);
+  assert.doesNotMatch(html,/id="monthFrom"|id="monthTo"|id="yearFrom"|id="yearTo"|FRA MÅNED|TIL MÅNED|FRA ÅR|TIL ÅR/);
+  assert.doesNotMatch(js,/monthFrom|monthTo|fromMonth|toMonth/);
+  assert.doesNotMatch(css,/filter-month-from|filter-month-to|input\[type="month"\]/);
   assert.match(css,/\.search-filters\{\s*display:grid/);
+  assert.ok(css.includes("grid-template-columns:minmax(0,2fr) minmax(0,1fr)"));
   assert.ok(css.includes("@container search-filter-panel (max-width:780px)"));
   assert.ok(css.includes("@container search-filter-panel (max-width:490px)"));
-  assert.ok(css.includes("@container search-filter-panel (max-width:335px)"));
-  assert.ok(js.includes('from:$("monthFrom").value,to:$("monthTo").value'));
-  assert.match(js,/Fra måned skal være før eller samme som til måned/);
+  assert.ok(!css.includes("@container search-filter-panel (max-width:335px)"));
+  assert.match(js,/party:\[\.\.\.document\.querySelectorAll/);
+  assert.doesNotMatch(js,/from:\$\(|to:\$\(/);
 });
 
 test("header keeps two counters but removes the public archive coverage text",()=>{
