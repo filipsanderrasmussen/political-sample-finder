@@ -208,6 +208,18 @@ function ftsQuery(terms,speaker){
   for(const t of searchTokens(speaker))bits.push("speaker:"+ftsLiteral(t)+"*");
   return bits.join(" AND ");
 }
+// YYYY-MM filters represent complete calendar months; legacy YYYY parameters
+// remain supported for existing links to /api/search.
+function periodBoundary(value,exclusiveEnd=false){
+ const m=/^((?:19|20)\d{2})(?:-(0[1-9]|1[0-2]))?$/.exec(String(value||"").trim());
+ if(!m)return null;
+ let year=Number(m[1]),month=Number(m[2]||1);
+ if(exclusiveEnd){
+   if(!m[2]||month===12){year++;month=1;}
+   else month++;
+ }
+ return year+"-"+String(month).padStart(2,"0")+"-01";
+}
 async function findSpeeches(env,params) {
   const q=(params.get("q")||"").trim().slice(0,160);
   const speaker=(params.get("speaker")||"").trim().slice(0,120);
@@ -228,9 +240,10 @@ async function findSpeeches(env,params) {
   const conditions=["m.status='ready'",
     "NOT (m.samling='20251' AND m.date >= '2026-04-10' AND m.date < '2026-10-06')"];
   const values=match?[match]:[];
-  const from=(params.get("from")||"").trim(),to=(params.get("to")||"").trim();
-  if(from && /^(?:19|20)\d{2}$/.test(from)){conditions.push("m.date>=?");values.push(from+"-01-01");}
-  if(to && /^(?:19|20)\d{2}$/.test(to)){conditions.push("m.date<?");values.push(String(Number(to)+1)+"-01-01");}
+  const from=periodBoundary(params.get("from"));
+  const to=periodBoundary(params.get("to"),true);
+  if(from){conditions.push("m.date>=?");values.push(from);}
+  if(to){conditions.push("m.date<?");values.push(to);}
   const parties=(params.get("party")||"").split(",").map(x=>x.trim().toUpperCase())
      .filter(x=>/^[A-ZÆØÅ]{1,6}$/.test(x)).slice(0,12);
   if(parties.length){
@@ -457,4 +470,4 @@ export default {
     })().catch(err=>console.error("Scheduled transcript import:",err)));
   }
 };
-export { isoDate, rssEntries, safeMeeting, findMeetingAudio, contextParams, searchTokens, matchesSearchTerms, ftsQuery, findSpeeches, issueSession, validSession };
+export { isoDate, rssEntries, safeMeeting, findMeetingAudio, contextParams, searchTokens, matchesSearchTerms, ftsQuery, findSpeeches, periodBoundary, issueSession, validSession };
