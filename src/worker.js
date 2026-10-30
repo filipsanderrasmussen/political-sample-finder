@@ -4,6 +4,7 @@ import { relayOfficialAudio } from "./clip-source.js";
 import { syncXmlBatch, xmlArchiveStatus } from "./xml-archive.js";
 import { verifyKnownAudioBatch } from "./audio-registry.js";
 import { inferredParty, ministerPartyPredicate } from "./minister-parties.js";
+import {meetingRecesses,recessCorrection} from "./audio-timeline.js";
 import offlinePodcastIndex from "./audio-index.json" with { type: "json" };
 // Political Sample Finder — Cloudflare Worker + D1.
 // Source-backed: results only come from imported Folketingstidende PDFs.
@@ -284,6 +285,11 @@ async function findSpeeches(env,params) {
   const query=env.DB.prepare(sql).bind(...values,limit+1,page*limit);
   const rows=(await query.all()).results||[];
   results.has_more=rows.length>limit;
+  // A second bounded query returns only explicit recess markers for meetings
+  // on this page; no D1 schema change or transcript reimport is required.
+  let recesses=[];
+  try{recesses=await meetingRecesses(env,rows.slice(0,limit));}
+  catch(e){console.warn("Recess metadata unavailable:",String(e));}
   for(const r of rows.slice(0,limit)){
     const anchor=r.mp3_url?.match(/\/\d{2}-\d{2}-\d{4}_(\d{2})-(\d{2})_salen\.mp3/i);
     r.first_clock=anchor?anchor[1]+":"+anchor[2]:r.clock.slice(0,5);
@@ -298,6 +304,9 @@ async function findSpeeches(env,params) {
     // Verified URL/meeting pairing does NOT mean the MP3 timeline has been
     // aligned to transcript wall-clock timestamps (especially across recesses).
     r.audio_timing="unverified";
+    const pause=recessCorrection(recesses,r.meeting_id,r.clock);
+    r.pause_seconds=pause.seconds;
+    r.pause_count=pause.count;
     delete r.mp3_url;
     delete r.audio_title;
     results.push(r);
