@@ -41,6 +41,8 @@ test("FTS5 keeps word matching, filters before pagination and joins only verifie
   const sql=sqls.find(x=>x.includes("JOIN meeting_audio"));
   assert.ok(sql);
   assert.match(sql,/speech_fts MATCH \?/);
+  assert.match(sql,/SELECT sx\.clock FROM speeches sx WHERE sx\.meeting_id=s\.meeting_id/);
+  assert.match(sql,/sx\.idx>s\.idx AND sx\.clock>s\.clock ORDER BY sx\.idx LIMIT 1\) next_clock/);
   assert.match(sql,/s\.party IN \(\?,\?\)/);
   assert.match(sql,/s\.speaker LIKE \?/);
   assert.match(sql,/m\.date>=\?/);

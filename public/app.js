@@ -1,5 +1,6 @@
 import { initMonitor } from "./monitor.js";
 import { initClipper } from "./clipper.js";
+import { estimatedWordSeek } from "./word-seek.js";
 const $=x=>document.getElementById(x);
 let clipper=null;
 const state={rows:[],stats:null,q:"",speaker:"",playing:null,pending:null,loading:false,transcriptRequestId:0,searchRequestId:0,adminSession:false,page:0,hasMore:false};
@@ -68,6 +69,12 @@ function offset(v){if(v===null||v<0||!Number.isFinite(v))return "Ukendt";v=Math.
 function anchor(url){try{return localStorage.getItem("psf.anchor:"+url);}catch{return null;}}
 function storeAnchor(url,val){try{localStorage.setItem("psf.anchor:"+url,val);}catch{}}
 function seconds(row,p){const a=mins(row.clock),b=mins(anchor(p.mp3_url)||row.first_clock||row.clock);return a===null||b===null?null:(a-b)*60;}
+function wordPlayback(row,p,q){
+ const start=seconds(row,p);
+ const estimate=estimatedWordSeek(row.content,q,row.clock,row.next_clock);
+ return {estimate:start!==null&&start>=0?estimate:null,
+         position:start===null?null:start+(start>=0?(estimate?.seconds||0):0)};
+}
 function render(){
  const meet=Number(state.stats?.verified_audio_meetings||0);
  const speech=Number(state.stats?.audio_speeches||0);
@@ -92,7 +99,13 @@ function render(){
  $("results").innerHTML=state.rows.map((r,i)=>{
   const podcasts=r.podcasts||[],p=podcasts[0];
   const speaker=/^(Spm\.?\s*nr\.?|\d+\)|Til\s+(?:udenrigs|justits|stats|udlændinge|social|miljø|indenrigs|finans))/i.test(r.speaker)?"Taler ikke sikkert identificeret":r.speaker;
-  const listen=podcasts.slice(0,3).map((a,i)=>'<button class="link-btn listen-btn" data-listen="'+esc(r.id)+'" data-ix="'+i+'">♫ Lyt fra indlæggets start · ca. '+esc(offset(seconds(r,a)))+(podcasts.length>1?" · kandidat "+(i+1):"")+'</button>').join("");
+  const listen=podcasts.slice(0,3).map((a,i)=>{
+   const target=wordPlayback(r,a,state.q);
+   return '<button class="link-btn listen-btn" data-listen="'+esc(r.id)+'" data-ix="'+i+'">'+
+    (target.estimate?'♫ Lyt nær søgeordet':'♫ Lyt fra indlæggets start')+
+    ' · ca. '+esc(offset(target.position))+
+    (podcasts.length>1?" · kandidat "+(i+1):"")+'</button>';
+  }).join("");
   return '<article class="result"><div class="result-terminal-top"><span class="result-index">#'+String(i+1).padStart(3,"0")+'</span><span>// REFERATFUND</span></div><div class="result-meta"><b class="speaker-name">'+esc(speaker)+'</b><span class="date">'+dateLabel(r.date)+' · Møde '+r.meeting_no+'</span></div>'+
   '<p class="quote">“'+highlight(excerpt(r.content,state.q),state.q)+'”</p><div class="result-footer"><span class="time-pill">◷ Kl. '+esc(r.clock)+'</span>'+
   '<span class="micro">'+(p?"✓ MP3 fundet til møde nr. "+r.meeting_no:(r.audio_source==="not_in_feed"?"Mødet er ikke i det nuværende RSS-feed":r.audio_source==="feed_unavailable"?"Lydfeed kunne ikke hentes":"Ingen MP3 fundet endnu"))+'</span>'+
@@ -186,7 +199,8 @@ function openPlayer(row,p){
  audio.pause();
  audio.removeAttribute("src");
  audio.load();
- state.playing={row,p};
+ const target=wordPlayback(row,p,state.q);
+ state.playing={row,p,estimated:!!target.estimate};
  state.pending=null;
  const speaker=String(row.speaker||"");
  const suspect=/^(Spm\.?\s*nr\.?|Til\s+(?:udenrigs|justits|stats|udlændinge|social|miljø|indenrigs|finans)|\d+[).])/i.test(speaker);
@@ -196,9 +210,11 @@ function openPlayer(row,p){
  $("playerStart").value=anchor(p.mp3_url)||row.first_clock||row.clock;
  $("playerMp3Link").href=p.mp3_url;
  $("transcriptPdf").href=row.source_url+"#page="+Number(row.page||1);
- $("playerStatus").textContent="Afspilning fra indlæggets begyndelse. Søgeordet kan forekomme senere.";
+ $("playerStatus").textContent=target.estimate?"Starter cirka 6 sekunder før søgeordets estimerede placering. Finjustér med ±15 sek.":"Afspilning fra indlæggets begyndelse. Søgeordet kan forekomme senere.";
  $("playerDialog").querySelector(".player-advanced").open=false;
- const position=calcOffset();
+ const beginning=calcOffset();
+ const position=beginning!==null&&beginning>=0?beginning+(target.estimate?.seconds||0):beginning;
+ $("playerOffset").textContent=position!==null&&position<0?"Før lydstart":offset(position);
  $("playerDialog").showModal();
  audio.src=p.mp3_url;
  audio.load();
@@ -241,6 +257,7 @@ async function seek(){
    state.pending=null;return;
  }
  storeAnchor(state.playing.p.mp3_url,$("playerStart").value);
+ state.playing.estimated=false;
  if(audio.readyState<1){
    state.pending=n;
    $("playerStatus").textContent="Indlæser lydfilen…";
@@ -270,7 +287,7 @@ function finishInitialSeek(){
  }
  try{
    audio.currentTime=n;
-   $("playerStatus").textContent="Startet omkring "+offset(n)+" · brug ±15 sek. til at finjustere.";
+   $("playerStatus").textContent=(state.playing.estimated?"Startet nær søgeordet":"Startet ved indlæggets begyndelse")+" · ca. "+offset(n)+" · finjustér med ±15 sek.";
  }catch{
    $("playerStatus").textContent="Hop er ikke understøttet af MP3-serveren. Prøv tidslinjen.";
  }

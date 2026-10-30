@@ -269,6 +269,10 @@ async function findSpeeches(env,params) {
     "favorites favorites_index JOIN speeches s ON s.id=favorites_index.speech_id";
   if(match)conditions.unshift("speech_fts MATCH ?");
   const sql="SELECT s.id,s.idx,s.meeting_id,s.speaker,s.party,s.clock,s.content,s.page,"+
+    // First later clock, in actual transcript order: same-time fragments
+    // and speaker interjections must not produce a zero-length interval.
+    "(SELECT sx.clock FROM speeches sx WHERE sx.meeting_id=s.meeting_id "+
+    "AND sx.idx>s.idx AND sx.clock>s.clock ORDER BY sx.idx LIMIT 1) next_clock,"+
     "m.date,m.title,m.meeting_no,m.samling,m.source_url,"+
     "a.mp3_url,a.title audio_title,CASE WHEN f.speech_id IS NULL THEN 0 ELSE 1 END favorite "+
     "FROM "+fromSql+
