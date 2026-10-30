@@ -17,7 +17,7 @@ Søg i **rigtige folketingsreferater med verificeret original MP3**. Teksten er 
 ## Cloudflare-udgaven v0.4
 
 - Worker API + D1 FTS5 til verificerede taler med lyd. Kun poster knyttet til `meeting_audio` returneres.
-- Søgning med serverbaseret årsspænd, flervalg af partier, talernavn, dato- og relevanssortering samt **25 fund ad gangen**.
+- Søgning med serverbaseret månedsinterval (valgfri fra-/til-måned, begge inklusive), flervalg af partier, talernavn samt **25 fund ad gangen**. Ældre API-links med hele årstal understøttes fortsat.
 - Folketingets **officielle XML** hentes fra `oda.ft.dk` via en begrænset GitHub Actions-kørsel. Kun møder med matchende, HTTP HEAD-verificeret original Kaltura-MP3 og **færdigredigerede referater** accepteres.
 - GitHub committer små JSON-mødefiler i `public/archive/xml/`. Cloudflare Cron importerer dem i 60-talebatches og opdaterer FTS5.
 - Ældre PDF-arkivfiler bevares, men importeres ikke længere automatisk. Deres taler vises kun, hvis en original MP3 er verificeret og koblet til møde-id.
