@@ -54,7 +54,7 @@ export function experimentalWordSeek(row,query){
  const exact=/^\d{2}:\d{2}:\d{2}$/;
  if(!exact.test(String(row?.clock||""))||!exact.test(String(row?.next_clock||"")))
   return null;
- if(!Number.isFinite(Number(row?.pause_seconds))||Number(row.pause_seconds)<0)
+ if(!Number.isFinite(row?.pause_seconds)||row.pause_seconds<0)
   return null;
  return estimatedWordSeek(row.content,query,row.clock,row.next_clock);
 }
