@@ -33,7 +33,7 @@ Søg i **rigtige folketingsreferater med verificeret original MP3**. Teksten er 
 5. Vælg **Save and Deploy**. D1-bindingen skal hedde **DB**. Nyere Wrangler kan oprette databasen automatisk. Kontrollér, at bindingen er synlig efter deploy. Ellers opret og tilknyt en D1-database gennem dashboardet.
 6. Åbn Workeren: **Settings → Variables and Secrets → Add → Secret**. Navn: **APP_PASSWORD**. Værdi: en selvvalgt stærk adgangskode (mindst 12 tegn). Gem med **Deploy**. Læg aldrig adgangskoden i GitHub.
 7. Verificér at seneste deployment på Cloudflare indeholder `public/archive/xml/manifest.json`. Kontroller `https://<din-worker>/api/archive/status` for `xml_meetings` og `xml_imported_meetings`. GitHub Actions' egen commit kan kræve et efterfølgende deployment på Cloudflare.
-8. Cron importerer XML-gradvist. Hvis du vil fremskynde processen, log ind i **Arkivstatus** og brug **Indeksér lydverificeret XML**. Søg dernæst efter f.eks. **ansvar**, og bekræft at hvert resultat har knappen **Lyt** og en original MP3.
+8. Cron importerer XML-gradvist. Hvis du vil fremskynde processen, vælg **LOG IND** nederst på siden, log ind med `APP_PASSWORD`, åbn **ARKIVSTATUS** øverst og brug **Indeksér lydverificeret XML**. Søg dernæst efter f.eks. **ansvar**, og bekræft at hvert resultat har knappen **Lyt** og en original MP3.
 
 ## Automatisk XML + verificeret MP3 (oktober 2026)
 
@@ -75,9 +75,9 @@ Lydens kilde er Folketinget. Rettigheder til offentliggørelse og musikalsk genb
 
 - Repositoryet er aktuelt **offentligt**. Gem aldrig adgangskoder deri.
 - Ændringer (import, favoritter, RSS) kræver APP_PASSWORD. Når den ikke er sat, er alle skrivehandlinger deaktiverede.
-- Adgangskoden gemmes kun i browserfanens sessionStorage.
+- Administratoradgangen benytter en signeret, `HttpOnly`-sessioncookie med 30 dages gyldighed. Adgangskoden gemmes ikke i browserens localStorage eller sessionStorage. **ARKIVSTATUS** og importværktøjerne vises kun efter login; anonyme brugere finder et diskret **LOG IND** i sidefoden.
 - Søge-API og allerede importerede offentlige referater er også offentligt tilgængelige på workers.dev. Brug Cloudflare Access, hvis hele appen skal være privat.
-- Ingen privat loginbruger, brugeradministration eller automatisk download af MP3 er implementeret.
+- Ingen individuel brugeradministration eller automatisk download af MP3 er implementeret.
 
 ## Filstruktur
 
