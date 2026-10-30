@@ -3,6 +3,7 @@ import { ensureSearchIndex } from "./search-index.js";
 import { relayOfficialAudio } from "./clip-source.js";
 import { syncXmlBatch, xmlArchiveStatus } from "./xml-archive.js";
 import { verifyKnownAudioBatch } from "./audio-registry.js";
+import { inferredParty, ministerPartyPredicate } from "./minister-parties.js";
 import offlinePodcastIndex from "./audio-index.json" with { type: "json" };
 // Political Sample Finder — Cloudflare Worker + D1.
 // Source-backed: results only come from imported Folketingstidende PDFs.
@@ -247,11 +248,16 @@ async function findSpeeches(env,params) {
   const parties=(params.get("party")||"").split(",").map(x=>x.trim().toUpperCase())
      .filter(x=>/^[A-ZÆØÅ]{1,6}$/.test(x)).slice(0,12);
   if(parties.length){
-    // Older PDF transcripts have no party column yet. Preserve their
-    // established speaker suffix, e.g. "Anders Kronborg (S)", as a fallback.
+    // XML speeches from ministers often omit GroupNameShort entirely.
+    // Resolve those missing party fields from date-scoped official cabinet
+    // rosters without changing source transcripts or rebuilding the D1 index.
+    // Older PDFs still use the speaker's party suffix as a fallback.
+    const minister=ministerPartyPredicate(parties);
+    const suffixes=parties.map(()=>"s.speaker LIKE ?").join(" OR ");
     conditions.push("(s.party IN ("+parties.map(() => "?").join(",")+") OR "+
-      "(s.party IS NULL AND ("+parties.map(() => "s.speaker LIKE ?").join(" OR ")+")))");
-    values.push(...parties,...parties.map(x=>"% ("+x+")"));
+      "((s.party IS NULL OR s.party='') AND (("+suffixes+")"+
+      (minister.sql?" OR ("+minister.sql+")":"")+")))");
+    values.push(...parties,...parties.map(x=>"% ("+x+")"),...minister.values);
   }
   if(fav)conditions.push("f.speech_id IS NOT NULL");
   const sorting=params.get("sort")||"newest";
@@ -281,7 +287,7 @@ async function findSpeeches(env,params) {
                  episode_url:r.mp3_url,feed:"Salen"}];
     if(!r.party){
       const suffix=r.speaker?.match(/\(([A-ZÆØÅ]{1,6})\)\s*$/);
-      r.party=suffix?suffix[1]:null;
+      r.party=suffix?suffix[1]:inferredParty(r.speaker,r.date);
     }
     r.favorite=Boolean(r.favorite);
     r.audio_source="verified_mp3";
