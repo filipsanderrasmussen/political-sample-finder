@@ -50,7 +50,8 @@ test("FTS5 keeps word matching, filters before pagination and joins only verifie
   assert.match(sql,/m\.date<\?/);
   assert.match(sql,/LIMIT \? OFFSET \?/);
   assert.ok(!sql.includes("LIMIT 1000"));
-  assert.deepEqual(params.at(-1),['content:"ulv"',"2025-01-01","2027-01-01","S","V","% (S)","% (V)",...ministerPartyPredicate(["S","V"]).values,26,25]);
+  assert.deepEqual(params.find(a=>a[0]==='content:"ulv"'),['content:"ulv"',"2025-01-01","2027-01-01","S","V","% (S)","% (V)",...ministerPartyPredicate(["S","V"]).values,26,25]);
+   assert.ok(sqls.some(q=>q.includes("content LIKE '%mødet er udsat%'")));
 });
 
 test("ministers with missing XML group are filtered by historically correct affiliation",async()=>{
@@ -89,9 +90,31 @@ test("ministers with missing XML group are filtered by historically correct affi
   assert.ok(sql);
   assert.match(sql,/m\.date>=\?/);
   assert.match(sql,/s\.speaker IN \(/);
-  assert.ok(bindings.at(-1).includes("Christian Rabjerg Madsen"));
-  assert.ok(bindings.at(-1).includes("2026-06-03"));
+  assert.ok(bindings.find(x=>x[0]==='content:"problemulv"').includes("Christian Rabjerg Madsen"));
+  assert.ok(bindings.find(x=>x[0]==='content:"problemulv"').includes("2026-06-03"));
   assert.ok(!ministerPartyPredicate(["DF"]).values.includes("Christian Rabjerg Madsen"));
+});
+
+test("search joins explicit recesses for the current meeting before returning playback targets",async()=>{
+ const meeting="20241_M104";
+ const sample={id:meeting+":327",idx:327,meeting_id:meeting,speaker:"Jakob Engel-Schmidt",
+   clock:"13:20:44",content:"Han sagde håndbold.",date:"2025-06-04",meeting_no:104,
+   mp3_url:"https://cdnapi.kaltura.com/p/2158211/sp/0/playManifest/entryId/1_cnd4zxiw/protocol/http/flavorParamIds/0/format/url/04-06-2025_10-00_salen.mp3"};
+ const marker=[
+  {meeting_id:meeting,idx:275,clock:"12:13:05",speaker:"Pause Pause",content:"Mødet er udsat. (Kl. 12:13)."},
+  {meeting_id:meeting,idx:276,clock:"13:00:02",speaker:"Lars-Christian Brask",content:"Mødet er genoptaget."}
+ ];
+ const seen=[];
+ const db={prepare(sql){seen.push(sql);return {
+   bind(){return this;},async first(){return {value:"1"};},
+   async all(){return {results:sql.includes("JOIN meeting_audio")?[sample]:marker};}
+ };}};
+ const rows=await findSpeeches({DB:db},new URLSearchParams({q:"håndbold"}));
+ assert.equal(rows.length,1);
+ assert.equal(rows[0].pause_seconds,2817);
+ assert.equal(rows[0].pause_count,1);
+ assert.equal(rows[0].audio_timing,"unverified","Pause correction must not imply precise word synchronization");
+ assert.equal(seen.filter(sql=>sql.includes("content LIKE '%mødet er udsat%'")).length,1);
 });
 
 test("month boundaries include the whole selected final month and handle December rollover",()=>{
