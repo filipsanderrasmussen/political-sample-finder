@@ -36,18 +36,18 @@ test("compact month range uses two native inputs inside the existing responsive 
   }
   assert.match(html,/class="search-filters"/);
   assert.doesNotMatch(html,/id="sortResults"|SORTERING|Nyeste først|Ældste først/);
-  assert.doesNotMatch(js,/\\$\\("sortResults"\\)/);
-  assert.match(html,/id="partySummary"[^>]*>Alle partier<\\/summary>/);
+  assert.ok(!js.includes('$("sortResults")'));
+  assert.match(html,/id="partySummary"[^>]*>Alle partier<\/summary>/);
   assert.match(html,/id="monthFrom" type="month" min="1900-01" max="2099-12"/);
   assert.match(html,/id="monthTo" type="month" min="1900-01" max="2099-12"/);
   assert.match(html,/FRA MÅNED/);
   assert.match(html,/TIL MÅNED/);
   assert.doesNotMatch(html,/id="yearFrom"|id="yearTo"|FRA ÅR|TIL ÅR/);
-  assert.match(css,/\\.search-filters\\{\\s*display:grid/);
-  assert.match(css,/@container search-filter-panel \\(max-width:780px\\)/);
-  assert.match(css,/@container search-filter-panel \\(max-width:490px\\)/);
-  assert.match(css,/@container search-filter-panel \\(max-width:335px\\)/);
-  assert.match(js,/from:\\$\\("monthFrom"\\)\\.value,to:\\$\\("monthTo"\\)\\.value/);
+  assert.match(css,/\.search-filters\{\s*display:grid/);
+  assert.ok(css.includes("@container search-filter-panel (max-width:780px)"));
+  assert.ok(css.includes("@container search-filter-panel (max-width:490px)"));
+  assert.ok(css.includes("@container search-filter-panel (max-width:335px)"));
+  assert.ok(js.includes('from:$("monthFrom").value,to:$("monthTo").value'));
   assert.match(js,/Fra måned skal være før eller samme som til måned/);
 });
 
