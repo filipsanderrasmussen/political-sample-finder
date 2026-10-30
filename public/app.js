@@ -68,7 +68,14 @@ function mins(x){const m=/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(x||"");return m
 function offset(v){if(v===null||v<0||!Number.isFinite(v))return "Ukendt";v=Math.floor(v);return [Math.floor(v/3600),Math.floor(v%3600/60),v%60].map(n=>String(n).padStart(2,"0")).join(":");}
 function anchor(url){try{return localStorage.getItem("psf.anchor:"+url);}catch{return null;}}
 function storeAnchor(url,val){try{localStorage.setItem("psf.anchor:"+url,val);}catch{}}
-function seconds(row,p){const a=mins(row.clock),b=mins(anchor(p.mp3_url)||row.first_clock||row.clock);return a===null||b===null?null:(a-b)*60;}
+function recessOffset(row,p){
+ // A manually adjusted MP3 start overrides the inferred break correction.
+ return anchor(p.mp3_url)?0:Math.max(0,Number(row.pause_seconds)||0);
+}
+function seconds(row,p){
+ const a=mins(row.clock),b=mins(anchor(p.mp3_url)||row.first_clock||row.clock);
+ return a===null||b===null?null:(a-b)*60-recessOffset(row,p);
+}
 function wordPlayback(row,p,q){
  const start=seconds(row,p);
  // A linked, playable MP3 is NOT the same as a verified word-to-audio
@@ -105,7 +112,7 @@ function render(){
   const listen=podcasts.slice(0,3).map((a,i)=>{
    const target=wordPlayback(r,a,state.q);
    return '<button class="link-btn listen-btn" data-listen="'+esc(r.id)+'" data-ix="'+i+'">'+
-    (target.estimate?'♫ Lyt nær søgeordet':'♫ Lyt ved vejledende start')+
+    (target.estimate?'♫ Lyt nær søgeordet':recessOffset(r,a)>0?'♫ Lyt med pausekorrektion':'♫ Lyt ved vejledende start')+
     ' · ca. '+esc(offset(target.position))+
     (podcasts.length>1?" · kandidat "+(i+1):"")+'</button>';
   }).join("");
@@ -216,7 +223,9 @@ function openPlayer(row,p){
  $("transcriptPdf").href=row.source_url+"#page="+Number(row.page||1);
  $("playerStatus").textContent=target.estimate
   ?"Starter cirka 6 sekunder før søgeordets estimerede placering. Finjustér med ±15 sek."
-  :"OBS: Lyd og referat er ikke synkroniseret. Mødepauser kan forskyde starttidspunktet betydeligt. Brug MP3-tidslinjen til at finde indlægget.";
+  :recessOffset(row,p)>0
+   ?"Trukket "+offset(recessOffset(row,p))+" registreret mødepause fra tidspositionen ("+row.pause_count+" pause(r)). Stadig vejledende: MP3'en er ikke synkroniseret sekundpræcist."
+   :"OBS: Lyd og referat er ikke synkroniseret. Mødepauser kan forskyde starttidspunktet betydeligt. Brug MP3-tidslinjen til at finde indlægget.";
  $("playerDialog").querySelector(".player-advanced").open=false;
  const beginning=calcOffset();
  const position=beginning!==null&&beginning>=0?beginning+(target.estimate?.seconds||0):beginning;
@@ -244,7 +253,7 @@ function openPlayer(row,p){
 function calcOffset(){
  if(!state.playing)return null;
  const a=mins(state.playing.row.clock),b=mins($("playerStart").value);
- const diff=a===null||b===null?null:(a-b)*60;
+ const diff=a===null||b===null?null:(a-b)*60-recessOffset(state.playing.row,state.playing.p);
  $("playerOffset").textContent=diff!==null&&diff<0?"Før lydstart":offset(diff);
  return diff;
 }
@@ -262,7 +271,8 @@ async function seek(){
    $("playerDialog").querySelector(".player-advanced").open=true;
    state.pending=null;return;
  }
- storeAnchor(state.playing.p.mp3_url,$("playerStart").value);
+ // Only editing the clock stores a custom anchor; playback must not
+ // silently override the automatic recess correction.
  state.playing.estimated=false;
  if(audio.readyState<1){
    state.pending=n;
@@ -273,7 +283,7 @@ async function seek(){
      $("playerStatus").textContent="Kunne ikke springe i lydfilen. Brug tidslinjen i afspilleren.";
      return;
    }
-   $("playerStatus").textContent="Vejledende position "+offset(n)+" – ikke synkroniseret med referatet.";
+   $("playerStatus").textContent="Vejledende position "+offset(n)+(recessOffset(state.playing.row,state.playing.p)>0?" (med registreret pausekorrektion).":" – ikke synkroniseret med referatet.");
  }
  try{await audio.play();}
  catch{
@@ -295,7 +305,10 @@ function finishInitialSeek(){
    audio.currentTime=n;
    $("playerStatus").textContent=state.playing.estimated
       ?"Startet nær søgeordet · ca. "+offset(n)+" · finjustér med ±15 sek."
-      :"Vejledende MP3-position "+offset(n)+" – ikke synkroniseret med referatet. Mødepauser kan give store afvigelser.";
+      :"Vejledende MP3-position "+offset(n)+
+      (recessOffset(state.playing.row,state.playing.p)>0
+       ?" – korrigeret for "+offset(recessOffset(state.playing.row,state.playing.p))+" registreret mødepause; verificér mod lyden."
+       :" – ikke synkroniseret med referatet. Mødepauser kan give store afvigelser.");
  }catch{
    $("playerStatus").textContent="Hop er ikke understøttet af MP3-serveren. Prøv tidslinjen.";
  }
@@ -394,8 +407,9 @@ function bind(){
  $("closeImport").onclick=()=>$("importDialog").close();$("closePlayer").onclick=()=>$("playerDialog").close();
  $("playerDialog").onclose=()=>{$("sampleAudio").pause();clipper?.close();state.playing=null;state.pending=null;state.transcriptRequestId++;};
  $("playerStart").oninput=()=>{
+   if(!state.playing)return;
+   storeAnchor(state.playing.p.mp3_url,$("playerStart").value);
    calcOffset();
-   if(state.playing)storeAnchor(state.playing.p.mp3_url,$("playerStart").value);
  };
  $("playerSeek").onclick=seek;
  $("playerBack").onclick=()=>skipAudio(-15);
