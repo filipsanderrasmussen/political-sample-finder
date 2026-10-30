@@ -116,9 +116,9 @@ test("public search hides admin and removes extra result controls",()=>{
   assert.match(html,/id="playerMp3Link"/); // Full MP3 remains reachable inside the player.
 });
 
-test("search audio accurately says that playback begins at the speech turn, not the keyword",()=>{
-  assert.match(js,/♫ Lyt fra indlæggets start/);
-  assert.match(js,/Afspilning fra indlæggets begyndelse\. Søgeordet kan forekomme senere\./);
+test("uncalibrated search audio does not promise an exact start or word timestamp",()=>{
+  assert.match(js,/♫ Lyt ved vejledende start/);
+  assert.match(js,/Lyd og referat er ikke synkroniseret/);
   assert.doesNotMatch(js,/♫ Lyt fra ca\./);
 });
 
