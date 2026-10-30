@@ -210,6 +210,7 @@ function openPlayer(row,p){
  $("playerQuote").textContent="“"+excerpt(row.content,state.q)+"”";
  $("playerSpeaker").textContent=suspect?"Taler ikke sikkert identificeret":speaker;
  $("playerContext").textContent="Møde "+row.meeting_no+" · "+dateLabel(row.date)+" · indlægget begynder kl. "+row.clock;
+ $("playerDuration").textContent="";
  $("playerStart").value=anchor(p.mp3_url)||row.first_clock||row.clock;
  $("playerMp3Link").href=p.mp3_url;
  $("transcriptPdf").href=row.source_url+"#page="+Number(row.page||1);
@@ -399,7 +400,13 @@ function bind(){
  $("playerSeek").onclick=seek;
  $("playerBack").onclick=()=>skipAudio(-15);
  $("playerForward").onclick=()=>skipAudio(15);
- $("sampleAudio").onloadedmetadata=finishInitialSeek;
+ $("sampleAudio").onloadedmetadata=()=>{
+  const audio=$("sampleAudio");
+  if(state.playing&&Number.isFinite(audio.duration)){
+   $("playerDuration").textContent="MP3-varighed "+offset(audio.duration);
+  }
+  finishInitialSeek();
+ };
  $("sampleAudio").onerror=()=>{if(state.playing)$("playerStatus").textContent="Kunne ikke afspille MP3 her. Åbn originalen i stedet.";};
  $("searchForm").onsubmit=e=>{e.preventDefault();search(true);};
  let timer;$("speaker").oninput=()=>{clearTimeout(timer);timer=setTimeout(()=>search(true),350);};
