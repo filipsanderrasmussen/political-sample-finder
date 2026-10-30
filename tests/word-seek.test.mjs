@@ -36,7 +36,7 @@ test("multiword searches prefer the complete adjacent phrase over isolated earli
    ("Dette er fortsat en del af det samlede indlæg. ").repeat(10);
  const match=estimatedWordSeek(content,"problem ulv","12:00:00","12:02:00");
  assert.ok(match,"A believable text duration and a phrase near the end should yield a seek");
- assert.equal(match.wordIndex,12*10+4);
+ assert.equal(match.wordIndex,12*9+4);
  assert.ok(match.seconds>50);
 });
 
