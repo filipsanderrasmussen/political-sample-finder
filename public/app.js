@@ -81,7 +81,7 @@ function recessOffset(row,p){
 }
 function seconds(row,p){
  const a=mins(row.clock),b=mins(manualAnchor(row,p)||row.first_clock||row.clock);
- return a===null||b===null?null:(a-b)*60-recessOffset(row,p);
+ return a===null||b===null?null:Math.round((a-b)*60)-recessOffset(row,p);
 }
 function wordPlayback(row,p,q,mode="start"){
  const start=seconds(row,p);
@@ -264,7 +264,7 @@ function openPlayer(row,p,mode="start"){
 function calcOffset(){
  if(!state.playing)return null;
  const a=mins(state.playing.row.clock),b=mins($("playerStart").value);
- const diff=a===null||b===null?null:(a-b)*60-recessOffset(state.playing.row,state.playing.p);
+ const diff=a===null||b===null?null:Math.round((a-b)*60)-recessOffset(state.playing.row,state.playing.p);
  $("playerOffset").textContent=diff!==null&&diff<0?"Før lydstart":offset(diff);
  return diff;
 }
