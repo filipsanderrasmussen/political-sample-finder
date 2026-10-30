@@ -35,6 +35,7 @@ test("FTS5 keeps word matching, filters before pagination and joins only verifie
   assert.equal(rows.length,1);
   assert.equal(rows[0].content,sample.content);
   assert.equal(rows[0].audio_source,"verified_mp3");
+  assert.equal(rows[0].audio_timing,"unverified","A verified recording is not proof of accurate wall-clock alignment");
   assert.equal(rows[0].first_clock,"11:00");
   assert.equal(rows.page,1);
   assert.equal(rows.has_more,false);
