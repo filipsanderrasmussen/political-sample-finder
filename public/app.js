@@ -71,7 +71,10 @@ function storeAnchor(url,val){try{localStorage.setItem("psf.anchor:"+url,val);}c
 function seconds(row,p){const a=mins(row.clock),b=mins(anchor(p.mp3_url)||row.first_clock||row.clock);return a===null||b===null?null:(a-b)*60;}
 function wordPlayback(row,p,q){
  const start=seconds(row,p);
- const estimate=estimatedWordSeek(row.content,q,row.clock,row.next_clock);
+ // A linked, playable MP3 is NOT the same as a verified word-to-audio
+ // timeline. Keep word interpolation dormant until timing is calibrated.
+ const estimate=row.audio_timing==="verified"
+  ?estimatedWordSeek(row.content,q,row.clock,row.next_clock):null;
  return {estimate:start!==null&&start>=0?estimate:null,
          position:start===null?null:start+(start>=0?(estimate?.seconds||0):0)};
 }
@@ -102,7 +105,7 @@ function render(){
   const listen=podcasts.slice(0,3).map((a,i)=>{
    const target=wordPlayback(r,a,state.q);
    return '<button class="link-btn listen-btn" data-listen="'+esc(r.id)+'" data-ix="'+i+'">'+
-    (target.estimate?'♫ Lyt nær søgeordet':'♫ Lyt fra indlæggets start')+
+    (target.estimate?'♫ Lyt nær søgeordet':'♫ Lyt ved vejledende start')+
     ' · ca. '+esc(offset(target.position))+
     (podcasts.length>1?" · kandidat "+(i+1):"")+'</button>';
   }).join("");
@@ -207,10 +210,13 @@ function openPlayer(row,p){
  $("playerQuote").textContent="“"+excerpt(row.content,state.q)+"”";
  $("playerSpeaker").textContent=suspect?"Taler ikke sikkert identificeret":speaker;
  $("playerContext").textContent="Møde "+row.meeting_no+" · "+dateLabel(row.date)+" · indlægget begynder kl. "+row.clock;
+ $("playerDuration").textContent="";
  $("playerStart").value=anchor(p.mp3_url)||row.first_clock||row.clock;
  $("playerMp3Link").href=p.mp3_url;
  $("transcriptPdf").href=row.source_url+"#page="+Number(row.page||1);
- $("playerStatus").textContent=target.estimate?"Starter cirka 6 sekunder før søgeordets estimerede placering. Finjustér med ±15 sek.":"Afspilning fra indlæggets begyndelse. Søgeordet kan forekomme senere.";
+ $("playerStatus").textContent=target.estimate
+  ?"Starter cirka 6 sekunder før søgeordets estimerede placering. Finjustér med ±15 sek."
+  :"OBS: Lyd og referat er ikke synkroniseret. Mødepauser kan forskyde starttidspunktet betydeligt. Brug MP3-tidslinjen til at finde indlægget.";
  $("playerDialog").querySelector(".player-advanced").open=false;
  const beginning=calcOffset();
  const position=beginning!==null&&beginning>=0?beginning+(target.estimate?.seconds||0):beginning;
@@ -267,7 +273,7 @@ async function seek(){
      $("playerStatus").textContent="Kunne ikke springe i lydfilen. Brug tidslinjen i afspilleren.";
      return;
    }
-   $("playerStatus").textContent="Afspiller omkring "+offset(n)+".";
+   $("playerStatus").textContent="Vejledende position "+offset(n)+" – ikke synkroniseret med referatet.";
  }
  try{await audio.play();}
  catch{
@@ -287,7 +293,9 @@ function finishInitialSeek(){
  }
  try{
    audio.currentTime=n;
-   $("playerStatus").textContent=(state.playing.estimated?"Startet nær søgeordet":"Startet ved indlæggets begyndelse")+" · ca. "+offset(n)+" · finjustér med ±15 sek.";
+   $("playerStatus").textContent=state.playing.estimated
+      ?"Startet nær søgeordet · ca. "+offset(n)+" · finjustér med ±15 sek."
+      :"Vejledende MP3-position "+offset(n)+" – ikke synkroniseret med referatet. Mødepauser kan give store afvigelser.";
  }catch{
    $("playerStatus").textContent="Hop er ikke understøttet af MP3-serveren. Prøv tidslinjen.";
  }
@@ -392,7 +400,13 @@ function bind(){
  $("playerSeek").onclick=seek;
  $("playerBack").onclick=()=>skipAudio(-15);
  $("playerForward").onclick=()=>skipAudio(15);
- $("sampleAudio").onloadedmetadata=finishInitialSeek;
+ $("sampleAudio").onloadedmetadata=()=>{
+  const audio=$("sampleAudio");
+  if(state.playing&&Number.isFinite(audio.duration)){
+   $("playerDuration").textContent="MP3-varighed "+offset(audio.duration);
+  }
+  finishInitialSeek();
+ };
  $("sampleAudio").onerror=()=>{if(state.playing)$("playerStatus").textContent="Kunne ikke afspille MP3 her. Åbn originalen i stedet.";};
  $("searchForm").onsubmit=e=>{e.preventDefault();search(true);};
  let timer;$("speaker").oninput=()=>{clearTimeout(timer);timer=setTimeout(()=>search(true),350);};

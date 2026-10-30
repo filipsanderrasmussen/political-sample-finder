@@ -95,6 +95,16 @@ test("audio playback, transcript reading and archive admin tools survive redesig
   assert.match(js,/class="link-btn listen-btn"/);
 });
 
+test("uncalibrated MP3s cannot trigger misleading automatic word jumps",()=>{
+  assert.match(js,/const estimate=row\.audio_timing==="verified"/);
+  assert.match(js,/Lyt ved vejledende start/);
+  assert.match(js,/Lyd og referat er ikke synkroniseret/);
+  assert.match(js,/MP3-varighed/);
+  assert.match(html,/id="playerDuration"/);
+  assert.match(html,/Afspil fra vejledende start/);
+  assert.doesNotMatch(html,/Afspil fra indlæggets start/);
+});
+
 test("public search hides admin and removes extra result controls",()=>{
   assert.match(html,/id="openImport"[^>]*class="button outline hidden"/);
   assert.match(html,/id="openLogin"[^>]*class="footer-login"/);
@@ -106,9 +116,9 @@ test("public search hides admin and removes extra result controls",()=>{
   assert.match(html,/id="playerMp3Link"/); // Full MP3 remains reachable inside the player.
 });
 
-test("search audio accurately says that playback begins at the speech turn, not the keyword",()=>{
-  assert.match(js,/♫ Lyt fra indlæggets start/);
-  assert.match(js,/Afspilning fra indlæggets begyndelse\. Søgeordet kan forekomme senere\./);
+test("uncalibrated search audio does not promise an exact start or word timestamp",()=>{
+  assert.match(js,/♫ Lyt ved vejledende start/);
+  assert.match(js,/Lyd og referat er ikke synkroniseret/);
   assert.doesNotMatch(js,/♫ Lyt fra ca\./);
 });
 
