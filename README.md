@@ -21,7 +21,7 @@ Søg i **rigtige folketingsreferater med verificeret original MP3**. Teksten er 
 - Folketingets **officielle XML** hentes fra `oda.ft.dk` via en begrænset GitHub Actions-kørsel. Kun møder med matchende, HTTP HEAD-verificeret original Kaltura-MP3 og **færdigredigerede referater** accepteres.
 - GitHub committer små JSON-mødefiler i `public/archive/xml/`. Cloudflare Cron importerer dem i 60-talebatches og opdaterer FTS5.
 - Ældre PDF-arkivfiler bevares, men importeres ikke længere automatisk. Deres taler vises kun, hvis en original MP3 er verificeret og koblet til møde-id.
-- MP3 hentes i browseren **først når brugeren afspiller eller klipper**. WAV-klipperen benytter Kalturas officielle CORS- og byte-range-lydkilde direkte; proxyen bevares som sikker serverfunktion. Ingen videobehandling.
+- MP3 hentes i browseren **først når brugeren afspiller eller klipper**. Ved tekstsøgning estimerer afspilleren søgeordets position ud fra ordandelen og tiden til næste indlægs start; den starter 6 sekunder før den estimerede position, når tidsdata er troværdige, ellers fra indlæggets begyndelse. En særskilt knap hopper altid til indlæggets start. WAV-klipperen benytter Kalturas officielle CORS- og byte-range-lydkilde direkte; proxyen bevares som sikker serverfunktion. Ingen videobehandling.
 - Den nye version er verificeret live på workers.dev: FTS5-søgning, pagination, partifilter og udelukkende lydresultater er testet. En ægte Chrome-test har bekræftet 1 sek. WAV med lyd fra 02:00:00 i en 2024-MP3. XML-import i D1 udføres gradvist af Cron.
 
 ## Installation kun i browser (ingen Terminal)
@@ -64,7 +64,7 @@ Lydens kilde er Folketinget. Rettigheder til offentliggørelse og musikalsk genb
 
 ## Vigtige begrænsninger
 
-- Referater indeholder klokkeslæt ved **starten af taleindlæg**, ikke tidskoder for hvert enkelt ord.
+- Referater indeholder klokkeslæt ved **starten af taleindlæg**, ikke tidskoder for hvert enkelt ord. Den estimerede position er ikke en nøjagtig ord-tidskode. Indlæggets estimerede varighed kommer fra næste senere tidsstempel i samme møde, og interpolation slås fra ved usikre intervaller eller usandsynlig talehastighed.
 - Nye XML-møder kræver samling, mødenummer, dato og en særskilt verificeret MP3-kilde. Eksisterende RSS-registreringer forbindes via match på dato **og mødenummer** og kontrolleres med HEAD.
 - En lydoptagelse starter ikke nødvendigvis ved det første referatklokkeslæt; afspillerens tidsposition er derfor kun et overslag.
 - RSS-feedets historiske dækning er ikke komplet verificeret.
