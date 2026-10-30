@@ -50,6 +50,18 @@ test("focused search shows speaker and party filters but no date selection",()=>
   assert.doesNotMatch(js,/from:\$\(|to:\$\(/);
 });
 
+test("party picker aligns every option and renders a centered old-school X",()=>{
+  const options=[...html.matchAll(/<label><input type="checkbox" name="party" value="[^"]+">[^<]+<\/label>/g)];
+  assert.equal(options.length,12);
+  assert.match(css,/\.party-grid\{[\s\S]*?grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
+  assert.match(css,/\.party-grid label\{[\s\S]*?display:grid;grid-template-columns:22px minmax\(0,1fr\)/);
+  assert.match(css,/\.filter-party \.party-grid input\[type="checkbox"\]\{[\s\S]*?appearance:none;[\s\S]*?display:grid;place-items:center;[\s\S]*?width:22px;height:22px;[\s\S]*?margin:0;padding:0/);
+  assert.match(css,/\.filter-party \.party-grid input\[type="checkbox"\]::before\{\s*content:"X";[\s\S]*?opacity:0/);
+  assert.match(css,/\.filter-party \.party-grid input\[type="checkbox"\]:checked::before\{\s*opacity:1/);
+  assert.match(css,/\.filter-party \.party-grid input\[type="checkbox"\]:focus-visible\{/);
+  assert.match(js,/input\[name="party"\]:checked/);
+});
+
 test("header keeps two counters but removes the public archive coverage text",()=>{
   for(const id of ["statMeetings","statSpeeches"]){
     assert.match(html,new RegExp('id="'+id+'"'));
