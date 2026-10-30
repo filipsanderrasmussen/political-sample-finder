@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
-import {searchTokens,matchesSearchTerms,ftsQuery,findSpeeches} from "../src/worker.js";
+import {searchTokens,matchesSearchTerms,ftsQuery,findSpeeches,periodBoundary} from "../src/worker.js";
 
 test("ulv matches a complete word, not pulver or ulven",()=>{
   assert.deepEqual(searchTokens("ULV, angst!"),["ulv","angst"]);
@@ -47,6 +47,35 @@ test("FTS5 keeps word matching, filters before pagination and joins only verifie
   assert.match(sql,/LIMIT \? OFFSET \?/);
   assert.ok(!sql.includes("LIMIT 1000"));
   assert.deepEqual(params.at(-1),['content:"ulv"',"2025-01-01","2027-01-01","S","V","% (S)","% (V)",26,25]);
+});
+
+test("month boundaries include the whole selected final month and handle December rollover",()=>{
+  assert.equal(periodBoundary("2025-02"),"2025-02-01");
+  assert.equal(periodBoundary("2025-02",true),"2025-03-01");
+  assert.equal(periodBoundary("2026-12",true),"2027-01-01");
+  assert.equal(periodBoundary("2025",true),"2026-01-01"); // Legacy year-filter links.
+  assert.equal(periodBoundary("2025-00"),null);
+  assert.equal(periodBoundary("2025-13"),null);
+  assert.equal(periodBoundary("2025-02-15"),null);
+  assert.equal(periodBoundary("2025-invalid"),null);
+  assert.equal(periodBoundary(""),null);
+});
+
+test("SQL applies month date boundaries before pagination",async()=>{
+  const calls=[];
+  const db={prepare(sql){return {
+    bind(...args){calls.push({sql,args});return this;},
+    async first(){return {value:"1"};},
+    async all(){return {results:[]};}
+  };}};
+  await findSpeeches({DB:db},new URLSearchParams({
+    q:"ulv",from:"2025-11",to:"2026-02"
+  }));
+  const match=calls.find(x=>x.sql.includes("JOIN meeting_audio"));
+  assert.ok(match);
+  assert.match(match.sql,/m\.date>=\?/);
+  assert.match(match.sql,/m\.date<\?/);
+  assert.deepEqual(match.args,['content:"ulv"',"2025-11-01","2026-03-01",26,0]);
 });
 
 test("25-result pages report whether further results exist",async()=>{
