@@ -699,14 +699,42 @@ footer{font-size:15px}
 .party-grid{
   position:absolute;z-index:30;top:calc(100% + 5px);left:0;
   width:max(100%,230px);min-width:0;max-width:min(350px,80vw);
-  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 5px;
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+  align-items:center;gap:12px 10px;
   margin:0;padding:13px;
   background:#080808;border:1px solid var(--accent);
   border-radius:3px;box-shadow:0 12px 22px rgb(0 0 0 / .8);
 }
-.party-grid label{display:flex;align-items:center;gap:5px;cursor:pointer;
-  font:20px "VT323",ui-monospace,monospace;color:var(--accent)}
-.party-grid input{accent-color:var(--accent)}
+.party-grid label{
+  display:grid;grid-template-columns:22px minmax(0,1fr);
+  align-items:center;column-gap:8px;min-height:22px;min-width:0;
+  cursor:pointer;white-space:nowrap;
+  font:20px "VT323",ui-monospace,monospace;color:var(--accent);
+  line-height:1;
+}
+/* Override the general .filter-field input sizing: every box stays 22 × 22. */
+.filter-party .party-grid input[type="checkbox"]{
+  appearance:none;-webkit-appearance:none;
+  box-sizing:border-box;display:grid;place-items:center;
+  width:22px;height:22px;min-width:22px;
+  margin:0;padding:0;
+  background:#080808;color:var(--accent);
+  border:1px solid var(--border);border-radius:2px;
+  cursor:pointer;
+}
+.filter-party .party-grid input[type="checkbox"]::before{
+  content:"X";font:20px/1 "VT323",ui-monospace,monospace;
+  opacity:0;
+}
+.filter-party .party-grid input[type="checkbox"]:checked{
+  border-color:var(--accent);
+}
+.filter-party .party-grid input[type="checkbox"]:checked::before{
+  opacity:1;
+}
+.filter-party .party-grid input[type="checkbox"]:focus-visible{
+  outline:2px solid var(--accent);outline-offset:2px;
+}
 .search-pages{display:flex;align-items:center;justify-content:center;gap:14px;margin:22px 0 14px}
 .search-pages.hidden{display:none}
 .search-pages span{color:var(--accent);font:22px "VT323",ui-monospace,monospace}
