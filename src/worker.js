@@ -295,6 +295,9 @@ async function findSpeeches(env,params) {
     }
     r.favorite=Boolean(r.favorite);
     r.audio_source="verified_mp3";
+    // Verified URL/meeting pairing does NOT mean the MP3 timeline has been
+    // aligned to transcript wall-clock timestamps (especially across recesses).
+    r.audio_timing="unverified";
     delete r.mp3_url;
     delete r.audio_title;
     results.push(r);
