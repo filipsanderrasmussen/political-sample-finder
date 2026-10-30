@@ -89,7 +89,7 @@ test("audio playback, transcript reading and archive admin tools survive redesig
   for(const id of ["sampleAudio","playerSeek","playerBack","playerForward","transcriptList","transcriptPdf","importDialog","openImport","openLogin","syncArchiveBtn","adminLoginBtn"]){
     assert.match(html,new RegExp('id="'+id+'"'));
   }
-  assert.match(js,/function openPlayer\(row,p\)/);
+  assert.match(js,/function openPlayer\(row,p,mode="start"\)/);
   assert.match(js,/function skipAudio\(delta\)/);
   assert.match(js,/function loadTranscript\(row\)/);
   assert.match(js,/class="link-btn listen-btn"/);
@@ -104,8 +104,15 @@ test("recorded meeting recesses correct approximate playback without overriding 
   assert.doesNotMatch(js,/storeAnchor\(state\.playing\.p\.mp3_url,\$\("playerStart"\)\.value\);\s*state\.playing\.estimated=false/);
 });
 
-test("uncalibrated MP3s cannot trigger misleading automatic word jumps",()=>{
-  assert.match(js,/const estimate=row\.audio_timing==="verified"/);
+test("explicit experimental word seeking uses second-resolution eligibility and preserves start button",()=>{
+  const wordSeeking=readFileSync("public/word-seek.js","utf8");
+  assert.match(js,/const estimate=mode==="word"\?experimentalWordSeek\(row,q\):null/);
+  assert.match(js,/data-mode/);
+  assert.match(js,/b\.dataset\.mode/);
+  assert.match(js,/TEST: lyt nær søgeordet/);
+  assert.match(js,/TEST: Pausekorrektion \+ ordplacering/);
+  assert.match(wordSeeking,/export function experimentalWordSeek/);
+  assert.match(wordSeeking,/\^\\d\{2\}:\\d\{2\}:\\d\{2\}\$/);
   assert.match(js,/Lyt ved vejledende start/);
   assert.match(js,/Lyd og referat er ikke synkroniseret/);
   assert.match(js,/MP3-varighed/);
