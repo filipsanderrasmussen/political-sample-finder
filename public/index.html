@@ -31,7 +31,7 @@
         <div class="stat-cell"><span class="stat-label">MØDER I SALEN</span><strong id="statMeetings" class="stat-value">---</strong></div>
         <div class="stat-cell"><span class="stat-label">TALEINDLÆG</span><strong id="statSpeeches" class="stat-value">------</strong></div>
       </div>
-      <button id="openImport" type="button" class="button outline">[ ARKIVSTATUS ]</button>
+      <button id="openImport" type="button" class="button outline hidden">[ ARKIVSTATUS ]</button>
     </div>
   </header>
   <main class="shell">
@@ -40,7 +40,6 @@
       <span id="stats" class="sr-only" aria-live="polite">Indlæser arkivstatus</span>
     <div class="search-options" aria-label="Afgræns søgeresultater">
         <div class="filter-toolbar">
-          <span class="filter-heading">AFGRÆNS SØGNINGEN</span>
           <button id="resetFilters" type="button" class="filter-reset">NULSTIL FILTRE</button>
         </div>
         <div class="search-filters">
@@ -78,17 +77,8 @@
           </div>
         </div>
       </div>
-      <div class="archive-strip" aria-label="Arkivets tidsmæssige dækning">
-        <span class="archive-years">ARKIVETS ÅR <strong id="statPeriod" class="stat-value stat-period">----</strong></span>
-        <span id="archiveCoverage" class="archive-coverage">OPGØR SØGBAR LYD …</span>
-        <details class="archive-definition">
-          <summary>HVAD TÆLLER VI?</summary>
-          <p><strong>MØDE:</strong> Et møde i Folketingets sal med søgbart referat og original MP3. <strong>TALEINDLÆG:</strong> En registreret taletur i referatet — både længere indlæg, spørgsmål, replikker og bemærkninger fra mødelederen. Ikke antallet af unikke politikere eller færdige lydklip.</p>
-        </details>
-      </div>
     </form>
     <section class="results-head" aria-label="Søgeresultater">
-      <div class="tabs" role="tablist"><button id="allTab" class="selected" role="tab" aria-selected="true" type="button">[ ALLE FUND ]</button><button id="favTab" role="tab" aria-selected="false" type="button">[ ★ FAVORITTER ]</button></div>
       <span id="count" aria-live="polite">KLAR TIL SØGNING</span>
     </section>
     <div id="notification" role="status" class="notification hidden"></div>
@@ -98,8 +88,8 @@
       <span id="pageLabel" aria-live="polite">SIDE 1</span>
       <button id="nextPage" type="button" class="button outline">NÆSTE →</button>
     </nav>
-    <div id="empty" class="empty"><span class="empty-symbol" aria-hidden="true">&gt;</span><h2>AFVENTER SØGNING</h2><p>Indtast en søgestreng ovenfor.</p><button class="button outline" type="button" id="emptyImport">[ ARKIVSTATUS ]</button></div>
-    <footer><span>TALEDATABASE 2000 // EDB-VÆRKTØJ TIL LYDSØGNING I FOLKETINGETS TALER</span><span>KILDER: FOLKETINGET</span><span>VEJLEDENDE TIDSPOSITIONER</span></footer>
+    <div id="empty" class="empty"><span class="empty-symbol" aria-hidden="true">&gt;</span><h2>AFVENTER SØGNING</h2><p class="hidden"></p></div>
+    <footer><span>TALEDATABASE 2000 // EDB-VÆRKTØJ TIL LYDSØGNING I FOLKETINGETS TALER</span><span>KILDER: FOLKETINGET</span><span>VEJLEDENDE TIDSPOSITIONER</span><button id="openLogin" type="button" class="footer-login">LOG IND</button></footer>
   </main>
     </div>
   </div>
@@ -114,18 +104,18 @@
   </div>
 </div>
 <dialog id="importDialog" class="dialog"><div class="dialog-content">
- <div class="dialog-head"><div><div class="eyebrow">TALEDATABASE 2000 // DRIFT</div><h2>Arkivstatus</h2></div><button class="close" id="closeImport" aria-label="Luk">×</button></div>
- <p class="intro">Lydlinks og søgbare referater bliver automatisk opdateret. Du behøver normalt ikke gøre noget.</p>
- <div class="archive-overview" id="archiveState" role="status" aria-live="polite">Henter status for søgearkivet…</div>
+ <div class="dialog-head"><div><div class="eyebrow">TALEDATABASE 2000 // DRIFT</div><h2 id="importTitle">Log ind</h2></div><button class="close" id="closeImport" aria-label="Luk">×</button></div>
+ <p class="intro admin-only hidden">Lydlinks og søgbare referater bliver automatisk opdateret. Du behøver normalt ikke gøre noget.</p>
+ <div class="archive-overview admin-only hidden" id="archiveState" role="status" aria-live="polite">Henter status for søgearkivet…</div>
  <div class="field" id="adminLoginArea">
-  <label for="adminPassword">ADGANG TIL FAVORITTER OG MANUEL IMPORT</label>
+  <label for="adminPassword">ADMINISTRATORADGANG</label>
   <input type="password" id="adminPassword" placeholder="Din valgte adgangskode" autocomplete="current-password">
   <button id="adminLoginBtn" class="button outline full" type="button">Log ind</button>
   <small>Du forbliver logget ind i 30 dage på denne browser. Adgangskoden gemmes ikke i browseren.</small>
  </div>
  <div id="adminLoggedIn" class="auth-signed-in hidden"><span>✓ Du er logget ind</span><button type="button" id="adminLogoutBtn" class="link-btn muted-link">Log ud</button></div>
  <p id="adminLoginStatus" class="feedback" role="status"></p>
- <details class="advanced-import" id="advancedImport">
+ <details class="advanced-import admin-only hidden" id="advancedImport">
   <summary>Avanceret: Manuel import og fejlfinding</summary>
   <p class="field-help">Kun nødvendigt, hvis en konkret optagelse eller et referat mangler.</p>
   <hr><div class="eyebrow">01 / IMPORTÉR ET REFERAT</div>

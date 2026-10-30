@@ -30,7 +30,7 @@ test("phosphor terminal homepage keeps search controls and no marketing hero",()
 
 test("filters form one clear grid with aligned labels and sensible defaults",()=>{
   assert.match(html,/class="filter-toolbar"/);
-  assert.match(html,/AFGRÆNS SØGNINGEN/);
+  assert.doesNotMatch(html,/AFGRÆNS SØGNINGEN/);
   for(const cls of ["filter-speaker","filter-party","filter-year-from","filter-year-to"]){
     assert.match(html,new RegExp('class="filter-field '+cls+'"'));
   }
@@ -49,29 +49,23 @@ test("filters form one clear grid with aligned labels and sensible defaults",()=
   assert.match(js,/\$\("yearTo"\)\.placeholder=last/);
 });
 
-test("header contains two live counters while archive year moves into a discreet coverage strip",()=>{
-  for(const id of ["statMeetings","statSpeeches","statPeriod"]){
+test("header keeps two counters but removes the public archive coverage text",()=>{
+  for(const id of ["statMeetings","statSpeeches"]){
     assert.match(html,new RegExp('id="'+id+'"'));
     assert.match(js,new RegExp('\\$\\("'+id+'"\\)\\.textContent'));
   }
   assert.match(html,/MØDER I SALEN/);
   assert.match(html,/TALEINDLÆG/);
-  assert.match(html,/ARKIVETS ÅR/);
-  assert.match(html,/class="archive-strip"/);
   assert.ok(html.indexOf('id="statMeetings"')<html.indexOf('</header>'));
   assert.ok(html.indexOf('id="statSpeeches"')<html.indexOf('</header>'));
-  assert.ok(html.indexOf('id="statPeriod"')>html.indexOf('</header>'));
-  assert.match(css,/\.brand h1\{/);
-  assert.match(css,/\.searchbar\{[\s\S]*?min-height:100px/); // legacy baseline, overridden by compact workspace
-  assert.match(css,/\/\* COMPACT WORKSPACE v2:/);
-  assert.match(css,/min-height:63px/);
-  assert.match(html,/id="archiveCoverage"/);
-  assert.match(html,/HVAD TÆLLER VI\?/);
-  assert.match(html,/IKKE KOMPLET DÆKNING|KUN MØDER MED ORIGINAL MP3|en registreret taletur/i);
+  assert.doesNotMatch(html,/ARKIVETS ÅR|class="archive-strip"|id="statPeriod"|id="archiveCoverage"|HVAD TÆLLER VI\?/);
+  assert.doesNotMatch(js,/IKKE KOMPLET DÆKNING AF PERIODEN|archiveCoverage|statPeriod/);
   assert.match(js,/searchable_first_date/);
   assert.match(js,/searchable_last_date/);
-  assert.match(js,/IKKE KOMPLET DÆKNING AF PERIODEN/);
-  assert.doesNotMatch(html,/LYDKILDER|TALEAFSNIT|SØGBARE MØDER/);
+  assert.match(css,/\.brand h1\{/);
+  assert.match(css,/\.searchbar\{[\s\S]*?min-height:100px/);
+  assert.match(css,/\/\* COMPACT WORKSPACE v2:/);
+  assert.match(css,/min-height:63px/);
   assert.match(css,/--accent:#4aff8f/);
   assert.doesNotMatch(css,/@keyframes cursor-blink|\.blinking-cursor|\.hero-cursor/);
   assert.match(css,/caret-color:var\(--accent\)/);
@@ -79,13 +73,24 @@ test("header contains two live counters while archive year moves into a discreet
 });
 
 test("audio playback, transcript reading and archive admin tools survive redesign",()=>{
-  for(const id of ["sampleAudio","playerSeek","playerBack","playerForward","transcriptList","transcriptPdf","importDialog","openImport","syncArchiveBtn","adminLoginBtn","favTab","allTab"]){
+  for(const id of ["sampleAudio","playerSeek","playerBack","playerForward","transcriptList","transcriptPdf","importDialog","openImport","openLogin","syncArchiveBtn","adminLoginBtn"]){
     assert.match(html,new RegExp('id="'+id+'"'));
   }
   assert.match(js,/function openPlayer\(row,p\)/);
   assert.match(js,/function skipAudio\(delta\)/);
   assert.match(js,/function loadTranscript\(row\)/);
   assert.match(js,/class="link-btn listen-btn"/);
+});
+
+test("public search hides admin and removes extra result controls",()=>{
+  assert.match(html,/id="openImport"[^>]*class="button outline hidden"/);
+  assert.match(html,/id="openLogin"[^>]*class="footer-login"/);
+  assert.match(html,/class="advanced-import admin-only hidden" id="advancedImport"/);
+  assert.match(js,/\/api\/session/);
+  assert.match(js,/\.classList\.toggle\("hidden",!state\.adminSession\)/);
+  assert.doesNotMatch(html,/id="allTab"|id="favTab"|id="emptyImport"|ALLE FUND|FAVORITTER/);
+  assert.doesNotMatch(js,/allTab|favTab|emptyImport|mp3Links|↓ Åbn MP3|Indtast et søgeord, eller vælg en hurtigsøgning/);
+  assert.match(html,/id="playerMp3Link"/); // Full MP3 remains reachable inside the player.
 });
 
 test("search audio accurately says that playback begins at the speech turn, not the keyword",()=>{

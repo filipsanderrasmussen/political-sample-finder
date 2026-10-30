@@ -2,7 +2,7 @@ import { initMonitor } from "./monitor.js";
 import { initClipper } from "./clipper.js";
 const $=x=>document.getElementById(x);
 let clipper=null;
-const state={rows:[],stats:null,q:"",speaker:"",favorites:false,playing:null,pending:null,loading:false,transcriptRequestId:0,searchRequestId:0,adminSession:false,page:0,hasMore:false};
+const state={rows:[],stats:null,q:"",speaker:"",playing:null,pending:null,loading:false,transcriptRequestId:0,searchRequestId:0,adminSession:false,page:0,hasMore:false};
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 // The server keeps a 30-day signed HttpOnly session; no password storage.
 function notice(s,bad=false){const el=$("notification");el.textContent=s;el.className="notification"+(bad?" error":"");clearTimeout(notice.timer);notice.timer=setTimeout(()=>el.classList.add("hidden"),9000);}
@@ -14,6 +14,19 @@ const post=(path,data)=>api(path,{method:"POST",headers:{"content-type":"applica
 function showAdminState(){
  $("adminLoginArea").classList.toggle("hidden",!!state.adminSession);
  $("adminLoggedIn").classList.toggle("hidden",!state.adminSession);
+ $("openImport").classList.toggle("hidden",!state.adminSession);
+ $("openLogin").classList.toggle("hidden",!!state.adminSession);
+ $("importTitle").textContent=state.adminSession?"Arkivstatus":"Log ind";
+ document.querySelectorAll(".admin-only").forEach(el=>el.classList.toggle("hidden",!state.adminSession));
+ if(state.adminSession)loadArchiveStatus();
+}
+async function loadArchiveStatus(){
+ try{
+  const r=await api("/api/archive/status");
+  $("archiveState").textContent=r.archive_meetings
+   ?(r.indexed_meetings+" / "+r.archive_meetings+" klargjorte møder indekseret · "+r.indexed_speeches.toLocaleString("da-DK")+" søgbare taleafsnit · "+r.remaining_meetings+" afventer import. Opdateres automatisk.")
+   :"Referatarkivet klargøres automatisk fra Folketingstidende.";
+ }catch{$("archiveState").textContent="Arkivstatus er midlertidigt utilgængelig.";}
 }
 async function authorize(){
  if(state.adminSession)return true;
@@ -23,7 +36,7 @@ async function authorize(){
  if(!password){
    if(!$("importDialog").open)$("importDialog").showModal();
    $("adminPassword").focus();
-   throw new Error("Log ind én gang i Arkivstatus for at gemme favoritter og importere data.");
+   throw new Error("Log ind for at gemme favoritter eller importere data.");
  }
  await api("/api/login",{method:"POST",headers:{"x-admin-key":password},credentials:"same-origin"});
  $("adminPassword").value="";
@@ -60,45 +73,41 @@ function render(){
  const speech=Number(state.stats?.audio_speeches||0);
  const first=state.stats?.searchable_first_date||null;
  const last=state.stats?.searchable_last_date||null;
- const span=first&&last?(first.slice(0,4)===last.slice(0,4)?first.slice(0,4):first.slice(0,4)+"–"+last.slice(0,4)):"—";
  const precise=first&&last?dateLabel(first)+" – "+dateLabel(last):"endnu ingen daterede møder";
  $("statMeetings").textContent=meet.toLocaleString("da-DK");
  $("statSpeeches").textContent=speech.toLocaleString("da-DK");
- $("statPeriod").textContent=span;
+
  // Years are optional filters; placeholders reflect indexed source dates.
  $("yearFrom").placeholder=first?.slice(0,4)||"År";
  $("yearTo").placeholder=last?.slice(0,4)||"År";
- $("archiveCoverage").textContent=meet
-  ?"SØGBART NU: "+precise+" · KUN MØDER MED ORIGINAL MP3 · IKKE KOMPLET DÆKNING AF PERIODEN"
-  :"INGEN LYDVERIFICEREDE MØDER ER INDEKSERET ENDNU";
+
  $("stats").textContent=meet+" møder i Folketingets sal, "+speech.toLocaleString("da-DK")+" registrerede taleindlæg. Dækning: "+precise+"; ikke alle møder i perioden.";
- $("count").textContent=state.loading?"SØGER":((state.q.trim()||state.speaker.trim()||state.favorites)?String(state.rows.length).padStart(2,"0")+" VIST · SIDE "+(state.page+1)+(state.hasMore?" · FLERE →":""):"KLAR TIL SØGNING");
+ $("count").textContent=state.loading?"SØGER":((state.q.trim()||state.speaker.trim())?String(state.rows.length).padStart(2,"0")+" VIST · SIDE "+(state.page+1)+(state.hasMore?" · FLERE →":""):"KLAR TIL SØGNING");
  const pages=$("searchPages");pages.classList.toggle("hidden",!(state.page>0||state.hasMore));
  $("prevPage").disabled=state.page===0;$("nextPage").disabled=!state.hasMore;
  $("pageLabel").textContent="SIDE "+(state.page+1);
  const empty=$("empty");empty.classList.toggle("hidden",state.loading||state.rows.length>0);
- const searching=!!(state.q.trim()||state.speaker.trim()||state.favorites);
+ const searching=!!(state.q.trim()||state.speaker.trim());
  empty.querySelector("h2").textContent=searching?"INGEN FUND":"AFVENTER SØGNING";
- empty.querySelector("p").textContent=searching?"Ingen fund. Prøv et andet ord eller navn.":"Indtast et søgeord, eller vælg en hurtigsøgning.";
- $("emptyImport").classList.toggle("hidden",!!state.stats?.speeches);
+
+  empty.querySelector("p").textContent=searching?"Ingen fund. Prøv et andet ord eller navn.":"";
+  empty.querySelector("p").classList.toggle("hidden",!searching);
  $("results").innerHTML=state.rows.map((r,i)=>{
   const podcasts=r.podcasts||[],p=podcasts[0];
-  const video="https://mobiltv.ft.dk/video/"+encodeURIComponent(r.samling)+"/salen/"+Number(r.meeting_no);
   const speaker=/^(Spm\.?\s*nr\.?|\d+\)|Til\s+(?:udenrigs|justits|stats|udlændinge|social|miljø|indenrigs|finans))/i.test(r.speaker)?"Taler ikke sikkert identificeret":r.speaker;
-  const mp3Links=podcasts.slice(0,3).map((a,i)=>'<a class="link-btn" href="'+esc(a.mp3_url)+'" target="_blank" rel="noopener noreferrer">↓ Åbn MP3'+(podcasts.length>1?' '+(i+1):'')+' ↗</a>').join("");
   const listen=podcasts.slice(0,3).map((a,i)=>'<button class="link-btn listen-btn" data-listen="'+esc(r.id)+'" data-ix="'+i+'">♫ Lyt fra indlæggets start · ca. '+esc(offset(seconds(r,a)))+(podcasts.length>1?" · kandidat "+(i+1):"")+'</button>').join("");
   return '<article class="result"><div class="result-terminal-top"><span class="result-index">#'+String(i+1).padStart(3,"0")+'</span><span>// REFERATFUND</span></div><div class="result-meta"><b class="speaker-name">'+esc(speaker)+'</b><span class="date">'+dateLabel(r.date)+' · Møde '+r.meeting_no+'</span></div>'+
   '<p class="quote">“'+highlight(excerpt(r.content,state.q),state.q)+'”</p><div class="result-footer"><span class="time-pill">◷ Kl. '+esc(r.clock)+'</span>'+
   '<span class="micro">'+(p?"✓ MP3 fundet til møde nr. "+r.meeting_no:(r.audio_source==="not_in_feed"?"Mødet er ikke i det nuværende RSS-feed":r.audio_source==="feed_unavailable"?"Lydfeed kunne ikke hentes":"Ingen MP3 fundet endnu"))+'</span>'+
   
   '<a class="link-btn muted-link" href="'+esc(r.source_url)+'#page='+Number(r.page||1)+'" target="_blank" rel="noopener noreferrer">Referat ↗</a>'+
-  mp3Links+listen+
+  listen+
 
   '<button class="fav-btn '+(r.favorite?"active":"")+'" data-fav="'+esc(r.id)+'">'+(r.favorite?"★":"☆")+'</button></div></article>';
  }).join("");
  document.querySelectorAll("[data-listen]").forEach(b=>b.onclick=()=>{const r=state.rows.find(x=>x.id===b.dataset.listen);const p=r?.podcasts?.[Number(b.dataset.ix)];if(r&&p)openPlayer(r,p);});
  document.querySelectorAll("[data-fav]").forEach(b=>b.onclick=async()=>{
-  try{await authorize();const r=state.rows.find(x=>x.id===b.dataset.fav),next=!r.favorite;await post("/api/favorite",{id:r.id,favorite:next});r.favorite=next;if(state.favorites&&!next)state.rows=state.rows.filter(x=>x!==r);render();}
+  try{await authorize();const r=state.rows.find(x=>x.id===b.dataset.fav),next=!r.favorite;await post("/api/favorite",{id:r.id,favorite:next});r.favorite=next;render();}
   catch(e){notice(e.message,true);}
  });
 }
@@ -107,10 +116,10 @@ async function search(resetPage=false){
  if(resetPage)state.page=0;
  state.q=$("query").value;state.speaker=$("speaker").value;
  const current=++state.searchRequestId;
- if(!state.q.trim()&&!state.speaker.trim()&&!state.favorites){state.rows=[];state.hasMore=false;render();return;}
+ if(!state.q.trim()&&!state.speaker.trim()){state.rows=[];state.hasMore=false;render();return;}
  state.loading=true;$("count").textContent="SØGER…";
  try{
-  const p=new URLSearchParams({q:state.q,speaker:state.speaker,favorites:state.favorites?"1":"0",
+  const p=new URLSearchParams({q:state.q,speaker:state.speaker,
    from:$("yearFrom").value,to:$("yearTo").value,
    party:[...document.querySelectorAll('input[name="party"]:checked')].map(x=>x.value).join(","),
    page:String(state.page)});
@@ -121,14 +130,6 @@ async function search(resetPage=false){
  }finally{
   if(current===state.searchRequestId){state.loading=false;render();}
  }
-}
-function setTab(fav){
- state.favorites=fav;state.page=0;
- $("allTab").classList.toggle("selected",!fav);
- $("favTab").classList.toggle("selected",fav);
- $("allTab").setAttribute("aria-selected",String(!fav));
- $("favTab").setAttribute("aria-selected",String(fav));
- search();
 }
 
 // The original transcript is a reading aid, not word-aligned subtitles.
@@ -367,7 +368,8 @@ async function importPdf(bytes){
 }
 function bind(){
  clipper=initClipper({audio:$("sampleAudio")});
- $("openImport").onclick=()=>{if(!$("importDialog").open)$("importDialog").showModal();};$("emptyImport").onclick=$("openImport").onclick;
+ $("openImport").onclick=()=>{if(state.adminSession&&!$("importDialog").open)$("importDialog").showModal();};
+  $("openLogin").onclick=()=>{if(!$("importDialog").open)$("importDialog").showModal();$("adminPassword").focus();};
  $("closeImport").onclick=()=>$("importDialog").close();$("closePlayer").onclick=()=>$("playerDialog").close();
  $("playerDialog").onclose=()=>{$("sampleAudio").pause();clipper?.close();state.playing=null;state.pending=null;state.transcriptRequestId++;};
  $("playerStart").oninput=()=>{
@@ -396,7 +398,7 @@ function bind(){
  };
  $("prevPage").onclick=()=>{if(state.page>0){state.page--;search();}};
  $("nextPage").onclick=()=>{if(state.hasMore){state.page++;search();}};
- $("allTab").onclick=()=>setTab(false);$("favTab").onclick=()=>setTab(true);
+
  $("importBtn").onclick=async()=>{
   const out=$("importState");out.textContent="Henter PDF fra Folketingstidende…";
   try{const r=await fetch("/api/pdf?"+new URLSearchParams(meeting()));if(!r.ok){const x=await r.json();throw new Error(x.error||"PDF kunne ikke hentes.");}
@@ -444,11 +446,7 @@ function bind(){
    await post("/api/logout",{});
    state.adminSession=false;showAdminState();$("adminLoginStatus").textContent="Logget ud.";
  };
- api("/api/archive/status").then(r=>{
-   $("archiveState").textContent=r.archive_meetings
-     ?(r.indexed_meetings+" / "+r.archive_meetings+" klargjorte møder indekseret · "+r.indexed_speeches.toLocaleString("da-DK")+" søgbare taleafsnit · "+r.remaining_meetings+" afventer import. Opdateres automatisk.")
-     :"Referatarkivet klargøres automatisk fra Folketingstidende.";
- }).catch(()=>{$("archiveState").textContent="Arkivstatus er midlertidigt utilgængelig.";});
+
 
 }
 // Initialize the application only when the physical monitor has power.

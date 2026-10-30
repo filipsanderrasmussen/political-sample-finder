@@ -172,6 +172,12 @@ footer{
   border-top:1px dashed color-mix(in srgb,var(--accent) 34%,transparent);color:color-mix(in srgb,var(--accent) 69%,transparent);font-size:9px;letter-spacing:.04em;
   margin-top:35px;padding:20px 0 27px;
 }
+.footer-login{
+  background:none;border:0;padding:0;color:var(--muted);
+  font:inherit;letter-spacing:inherit;cursor:pointer;
+  text-decoration:underline;text-underline-offset:3px;
+}
+.footer-login:hover,.footer-login:focus-visible{color:var(--accent)}
 .notification{padding:12px 15px;margin:14px 0;border:1px solid var(--border);border-radius:3px;
   background:#070707;color:var(--accent);font-size:12px}
 .notification.error{border:2px dashed var(--accent);background:var(--surface);color:var(--accent);font-weight:750}
