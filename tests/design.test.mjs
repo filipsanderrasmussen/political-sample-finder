@@ -95,6 +95,15 @@ test("audio playback, transcript reading and archive admin tools survive redesig
   assert.match(js,/class="link-btn listen-btn"/);
 });
 
+test("recorded meeting recesses correct approximate playback without overriding manual timing",()=>{
+  assert.match(js,/function recessOffset\(row,p\)/);
+  assert.match(js,/anchor\(p\.mp3_url\)\?0:/);
+  assert.match(js,/Lyt med pausekorrektion/);
+  assert.match(js,/Trukket .*registreret mødepause/);
+  assert.match(js,/const diff=a===null\|\|b===null\?null:\(a-b\)\*60-recessOffset/);
+  assert.doesNotMatch(js,/storeAnchor\(state\.playing\.p\.mp3_url,\$\("playerStart"\)\.value\);\s*state\.playing\.estimated=false/);
+});
+
 test("uncalibrated MP3s cannot trigger misleading automatic word jumps",()=>{
   assert.match(js,/const estimate=row\.audio_timing==="verified"/);
   assert.match(js,/Lyt ved vejledende start/);
