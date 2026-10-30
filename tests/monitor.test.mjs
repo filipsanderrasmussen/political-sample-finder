@@ -195,7 +195,8 @@ test("the supplied original MP3 is preloaded with no synthetic audio",()=>{
 });
 
 test("startup diagnostic text resembles a serial-ROM terminal, not a marketing splash",()=>{
-  assert.equal(BOOT_STEPS.length,12);
+  assert.equal(BOOT_STEPS.length,11);
+  assert.ok(BOOT_STEPS.every(step=>!step.text.includes("SPOOLKØ")));
   assert.equal(BOOT_STEPS.at(-1).text,"SYSTEM KLAR");
   assert.equal(BOOT_STEPS[0].text,"TD-2000 TERMINAL   ROM V1.7");
   assert.ok(BOOT_STEPS.some(x=>x.text.includes("64 KB RAM")));
