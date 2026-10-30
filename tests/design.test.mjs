@@ -89,7 +89,7 @@ test("audio playback, transcript reading and archive admin tools survive redesig
   for(const id of ["sampleAudio","playerSeek","playerBack","playerForward","transcriptList","transcriptPdf","importDialog","openImport","openLogin","syncArchiveBtn","adminLoginBtn"]){
     assert.match(html,new RegExp('id="'+id+'"'));
   }
-  assert.match(js,/function openPlayer\(row,p\)/);
+  assert.match(js,/function openPlayer\(row,p,mode="start"\)/);
   assert.match(js,/function skipAudio\(delta\)/);
   assert.match(js,/function loadTranscript\(row\)/);
   assert.match(js,/class="link-btn listen-btn"/);
