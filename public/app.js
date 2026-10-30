@@ -77,7 +77,6 @@ function render(){
  $("statMeetings").textContent=meet.toLocaleString("da-DK");
  $("statSpeeches").textContent=speech.toLocaleString("da-DK");
 
- // Month fields are optional; leaving either blank means an open-ended range.
 
  $("stats").textContent=meet+" møder i Folketingets sal, "+speech.toLocaleString("da-DK")+" registrerede taleindlæg. Dækning: "+precise+"; ikke alle møder i perioden.";
  $("count").textContent=state.loading?"SØGER":((state.q.trim()||state.speaker.trim())?String(state.rows.length).padStart(2,"0")+" VIST · SIDE "+(state.page+1)+(state.hasMore?" · FLERE →":""):"KLAR TIL SØGNING");
@@ -115,16 +114,9 @@ async function search(resetPage=false){
  state.q=$("query").value;state.speaker=$("speaker").value;
  const current=++state.searchRequestId;
  if(!state.q.trim()&&!state.speaker.trim()){state.rows=[];state.hasMore=false;render();return;}
- const fromMonth=$("monthFrom").value,toMonth=$("monthTo").value;
- if(fromMonth&&toMonth&&fromMonth>toMonth){
-   state.rows=[];state.hasMore=false;state.loading=false;render();
-   notice("Fra måned skal være før eller samme som til måned.",true);
-   return;
- }
  state.loading=true;$("count").textContent="SØGER…";
  try{
   const p=new URLSearchParams({q:state.q,speaker:state.speaker,
-   from:$("monthFrom").value,to:$("monthTo").value,
    party:[...document.querySelectorAll('input[name="party"]:checked')].map(x=>x.value).join(","),
    page:String(state.page)});
   const data=await api("/api/search?"+p);
@@ -387,7 +379,6 @@ function bind(){
  $("sampleAudio").onerror=()=>{if(state.playing)$("playerStatus").textContent="Kunne ikke afspille MP3 her. Åbn originalen i stedet.";};
  $("searchForm").onsubmit=e=>{e.preventDefault();search(true);};
  let timer;$("speaker").oninput=()=>{clearTimeout(timer);timer=setTimeout(()=>search(true),350);};
- for(const id of ["monthFrom","monthTo"]){$(id).addEventListener("change",()=>search(true));}
  const partySummary=()=>{
   const selected=[...document.querySelectorAll('input[name="party"]:checked')].map(x=>x.value);
   const summary=$("partySummary");
@@ -396,7 +387,7 @@ function bind(){
  };
  for(const input of document.querySelectorAll('input[name="party"]'))input.addEventListener("change",()=>{partySummary();search(true);});
  $("resetFilters").onclick=()=>{
-  $("speaker").value="";$("monthFrom").value="";$("monthTo").value="";
+  $("speaker").value="";
   for(const input of document.querySelectorAll('input[name="party"]'))input.checked=false;
   partySummary();search(true);
  };

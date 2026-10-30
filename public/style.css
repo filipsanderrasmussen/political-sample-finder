@@ -657,7 +657,7 @@ footer{font-size:15px}
 #resetFilters.filter-reset:hover,#resetFilters.filter-reset:focus-visible{color:var(--accent)}
 .search-filters{
   display:grid;
-  grid-template-columns:minmax(0,1.6fr) minmax(0,1.1fr) minmax(0,1fr) minmax(0,1fr);
+  grid-template-columns:minmax(0,2fr) minmax(0,1fr);
   align-items:end;gap:12px;width:100%;
 }
 .filter-field{display:flex;flex-direction:column;gap:7px;min-width:0}
@@ -715,12 +715,10 @@ footer{font-size:15px}
 @container search-filter-panel (max-width:780px){
   .search-filters{grid-template-columns:repeat(6,minmax(0,1fr));gap:12px}
   .filter-speaker,.filter-party{grid-column:span 3}
-  .filter-month-from,.filter-month-to{grid-column:span 3}
 }
 @container search-filter-panel (max-width:490px){
   .search-filters{gap:11px}
   .filter-speaker,.filter-party{grid-column:span 6}
-  .filter-month-from,.filter-month-to{grid-column:span 3}
   .filter-toolbar{padding-top:12px}
   .filter-heading{font-size:10px}
   #resetFilters.filter-reset{font-size:17px}
@@ -801,7 +799,6 @@ footer{font-size:15px}
   height:39px;padding:6px 10px;font-size:21px;
 }
 .filter-speaker .speakerfilter{height:39px;padding:6px 10px;font-size:21px}
-.filter-field input[type="month"]{font-size:20px;padding-inline:7px}
 .filter-field label,.filter-field .filter-label{font-size:12px}
 .archive-strip{
   display:flex;align-items:center;justify-content:flex-start;flex-wrap:wrap;
@@ -865,9 +862,6 @@ footer{font-size:15px}
   .archive-strip{gap:5px 10px}
   .archive-strip .archive-coverage{flex-basis:100%;order:2;font-size:11px}
   .archive-strip .archive-definition{margin-left:auto}
-}
-@container search-filter-panel (max-width:335px){
-  .filter-month-from,.filter-month-to{grid-column:span 6}
 }
 @media(max-width:390px){
   .brand h1{font-size:25px}
