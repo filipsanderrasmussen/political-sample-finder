@@ -648,7 +648,7 @@ footer{font-size:15px}
 }
 .filter-heading{color:var(--muted);font-size:12px;font-weight:700;letter-spacing:.12em}
 #resetFilters.filter-reset{
-  appearance:none;border:0;background:transparent;color:var(--muted);
+  margin-left:auto;appearance:none;border:0;background:transparent;color:var(--muted);
   padding:3px 0;cursor:pointer;white-space:nowrap;
   font:18px "VT323",ui-monospace,monospace;
   text-decoration:underline;text-decoration-color:var(--border);
