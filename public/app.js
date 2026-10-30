@@ -1,6 +1,6 @@
 import { initMonitor } from "./monitor.js";
 import { initClipper } from "./clipper.js";
-import { estimatedWordSeek } from "./word-seek.js";
+import { experimentalWordSeek } from "./word-seek.js";
 const $=x=>document.getElementById(x);
 let clipper=null;
 const state={rows:[],stats:null,q:"",speaker:"",playing:null,pending:null,loading:false,transcriptRequestId:0,searchRequestId:0,adminSession:false,page:0,hasMore:false};
@@ -76,12 +76,11 @@ function seconds(row,p){
  const a=mins(row.clock),b=mins(anchor(p.mp3_url)||row.first_clock||row.clock);
  return a===null||b===null?null:(a-b)*60-recessOffset(row,p);
 }
-function wordPlayback(row,p,q){
+function wordPlayback(row,p,q,mode="start"){
  const start=seconds(row,p);
- // A linked, playable MP3 is NOT the same as a verified word-to-audio
- // timeline. Keep word interpolation dormant until timing is calibrated.
- const estimate=row.audio_timing==="verified"
-  ?estimatedWordSeek(row.content,q,row.clock,row.next_clock):null;
+ // Experimental word seeking is only triggered by the explicitly labelled
+ // test button for a second-precise transcript, never rounded PDF timestamps.
+ const estimate=mode==="word"?experimentalWordSeek(row,q):null;
  return {estimate:start!==null&&start>=0?estimate:null,
          position:start===null?null:start+(start>=0?(estimate?.seconds||0):0)};
 }
@@ -110,9 +109,10 @@ function render(){
   const podcasts=r.podcasts||[],p=podcasts[0];
   const speaker=/^(Spm\.?\s*nr\.?|\d+\)|Til\s+(?:udenrigs|justits|stats|udlændinge|social|miljø|indenrigs|finans))/i.test(r.speaker)?"Taler ikke sikkert identificeret":r.speaker;
   const listen=podcasts.slice(0,3).map((a,i)=>{
-   const target=wordPlayback(r,a,state.q);
-   return '<button class="link-btn listen-btn" data-listen="'+esc(r.id)+'" data-ix="'+i+'">'+
-    (target.estimate?'♫ Lyt nær søgeordet':recessOffset(r,a)>0?'♫ Lyt med pausekorrektion':'♫ Lyt ved vejledende start')+
+   const target=wordPlayback(r,a,state.q,"word");
+   const mode=target.estimate?"word":"start";
+   return '<button class="link-btn listen-btn" data-listen="'+esc(r.id)+'" data-ix="'+i+'" data-mode="'+mode+'">'+
+    (target.estimate?'♫ TEST: lyt nær søgeordet':recessOffset(r,a)>0?'♫ Lyt med pausekorrektion':'♫ Lyt ved vejledende start')+
     ' · ca. '+esc(offset(target.position))+
     (podcasts.length>1?" · kandidat "+(i+1):"")+'</button>';
   }).join("");
@@ -125,7 +125,7 @@ function render(){
 
   '<button class="fav-btn '+(r.favorite?"active":"")+'" data-fav="'+esc(r.id)+'">'+(r.favorite?"★":"☆")+'</button></div></article>';
  }).join("");
- document.querySelectorAll("[data-listen]").forEach(b=>b.onclick=()=>{const r=state.rows.find(x=>x.id===b.dataset.listen);const p=r?.podcasts?.[Number(b.dataset.ix)];if(r&&p)openPlayer(r,p);});
+ document.querySelectorAll("[data-listen]").forEach(b=>b.onclick=()=>{const r=state.rows.find(x=>x.id===b.dataset.listen);const p=r?.podcasts?.[Number(b.dataset.ix)];if(r&&p)openPlayer(r,p,b.dataset.mode);});
  document.querySelectorAll("[data-fav]").forEach(b=>b.onclick=async()=>{
   try{await authorize();const r=state.rows.find(x=>x.id===b.dataset.fav),next=!r.favorite;await post("/api/favorite",{id:r.id,favorite:next});r.favorite=next;render();}
   catch(e){notice(e.message,true);}
@@ -204,12 +204,12 @@ async function loadTranscript(row){
    if(token===state.transcriptRequestId)list.textContent="Referatteksten kunne ikke hentes: "+e.message;
  }
 }
-function openPlayer(row,p){
+function openPlayer(row,p,mode="start"){
  const audio=$("sampleAudio");
  audio.pause();
  audio.removeAttribute("src");
  audio.load();
- const target=wordPlayback(row,p,state.q);
+ const target=wordPlayback(row,p,state.q,mode);
  state.playing={row,p,estimated:!!target.estimate};
  state.pending=null;
  const speaker=String(row.speaker||"");
@@ -222,7 +222,7 @@ function openPlayer(row,p){
  $("playerMp3Link").href=p.mp3_url;
  $("transcriptPdf").href=row.source_url+"#page="+Number(row.page||1);
  $("playerStatus").textContent=target.estimate
-  ?"Starter cirka 6 sekunder før søgeordets estimerede placering. Finjustér med ±15 sek."
+  ?"TEST: Pausekorrektion + ordplacering. Starter cirka 6 sekunder før det beregnede søgeord. Positionen er vejledende – brug ±15 sek. til at finjustere."
   :recessOffset(row,p)>0
    ?"Trukket "+offset(recessOffset(row,p))+" registreret mødepause fra tidspositionen ("+row.pause_count+" pause(r)). Stadig vejledende: MP3'en er ikke synkroniseret sekundpræcist."
    :"OBS: Lyd og referat er ikke synkroniseret. Mødepauser kan forskyde starttidspunktet betydeligt. Brug MP3-tidslinjen til at finde indlægget.";
@@ -304,7 +304,7 @@ function finishInitialSeek(){
  try{
    audio.currentTime=n;
    $("playerStatus").textContent=state.playing.estimated
-      ?"Startet nær søgeordet · ca. "+offset(n)+" · finjustér med ±15 sek."
+      ?"TEST: Estimeret ordposition "+offset(n)+" (inkl. registrerede pauser) · finjustér med ±15 sek."
       :"Vejledende MP3-position "+offset(n)+
       (recessOffset(state.playing.row,state.playing.p)>0
        ?" – korrigeret for "+offset(recessOffset(state.playing.row,state.playing.p))+" registreret mødepause; verificér mod lyden."
